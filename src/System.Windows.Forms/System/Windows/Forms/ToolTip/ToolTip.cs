@@ -225,10 +225,37 @@ public partial class ToolTip : Component, IExtenderProvider, IHandle<HWND>
             }
 
             cp.ExStyle = 0;
+
+            if (HasRightToLeft())
+            {
+                cp.ExStyle |= (int)WINDOW_EX_STYLE.WS_EX_LAYOUTRTL;
+            }
+
             cp.Caption = null;
 
             return cp;
         }
+    }
+
+    /// <summary>
+    ///  Determines if any associated control has RightToLeft enabled.
+    /// </summary>
+    private bool HasRightToLeft()
+    {
+        if (TopLevelControl is not null && !TopLevelControl.IsDisposed && TopLevelControl.RightToLeft == RightToLeft.Yes)
+        {
+            return true;
+        }
+
+        foreach (Control control in _tools.Keys)
+        {
+            if (control is not null && !control.IsDisposed && control.RightToLeft == RightToLeft.Yes)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

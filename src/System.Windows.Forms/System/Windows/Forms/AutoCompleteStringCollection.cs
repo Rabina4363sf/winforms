@@ -9,7 +9,7 @@ namespace System.Windows.Forms;
 /// <summary>
 ///  Represents a collection of strings.
 /// </summary>
-public class AutoCompleteStringCollection : IList
+public class AutoCompleteStringCollection : IList, IList<string>
 {
     private CollectionChangeEventHandler? _onCollectionChanged;
     private readonly List<string> _data = [];
@@ -199,4 +199,47 @@ public class AutoCompleteStringCollection : IList
     public IEnumerator GetEnumerator() => _data.GetEnumerator();
 
     internal string[] ToArray() => [.. _data];
+
+    //// <summary>
+    /// Adds the specified string to the collection through the
+    /// <see cref="ICollection{T}"/> interface.
+    /// </summary>
+    /// <param name="item">The string to add to the collection.</param>
+    /// <returns></returns>
+    void ICollection<string>.Add(string item)
+    {
+        if (item is not null)
+        {
+            _data.Add(item);
+            OnCollectionChanged(new CollectionChangeEventArgs(CollectionChangeAction.Add, item));
+        }
+    }
+
+    /// <summary>
+    /// Removes the first occurrence of the specified string from the collection
+    /// through the <see cref="ICollection{T}"/> interface.
+    /// </summary>
+    /// <param name="item">The string to remove from the collection.</param>
+    /// <returns>
+    /// <see langword="true"/> if the item was successfully removed; otherwise,
+    /// <see langword="false"/>.
+    /// </returns>
+    bool ICollection<string>.Remove(string item)
+    {
+        if (_data.Remove(item))
+        {
+            OnCollectionChanged(new CollectionChangeEventArgs(CollectionChangeAction.Remove, item));
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Returns a strongly typed enumerator that iterates through the collection.
+    /// </summary>
+    /// <returns>
+    /// An <see cref="IEnumerator{T}"/> for the collection.
+    /// </returns>
+    IEnumerator<string> IEnumerable<string>.GetEnumerator() => _data.GetEnumerator();
 }

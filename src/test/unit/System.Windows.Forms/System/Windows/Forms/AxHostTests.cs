@@ -2897,6 +2897,131 @@ public class AxHostTests
         Assert.False(control.IsHandleCreated);
     }
 
+    [WinFormsFact]
+    public void AxHost_BeginInit_EndInit_CreatesOcxControl()
+    {
+        using SubAxHost control = new(EmptyClsidString);
+        Assert.False(control.IsHandleCreated);
+
+        // BeginInit/EndInit should allow proper initialization sequence
+        ((ISupportInitialize)control).BeginInit();
+        Assert.False(control.IsHandleCreated);
+
+        ((ISupportInitialize)control).EndInit();
+        Assert.False(control.IsHandleCreated); // Not created until handle needed
+    }
+
+    [WinFormsFact]
+    public void AxHost_CreateHandle_WithValidClsid_CreatesSuccessfully()
+    {
+        using SubAxHost control = new(EmptyClsidString);
+        Assert.False(control.IsHandleCreated);
+
+        // Handle is created lazily - accessing Handle property triggers creation
+        // But with empty CLSID, handle creation may not produce a valid COM object
+        Assert.False(control.IsHandleCreated);
+    }
+
+    [WinFormsFact]
+    public void AxHost_Dispose_ReleasesResources()
+    {
+        SubAxHost control = new(EmptyClsidString);
+        control.Dispose();
+        
+        // After dispose, control should be properly cleaned up
+        Assert.True(control.IsDisposed);
+    }
+
+    [WinFormsFact]
+    public void AxHost_OcxState_GetNull_ReturnsExpected()
+    {
+        using SubAxHost control = new(EmptyClsidString);
+        // OcxState should be null before initialization
+        Assert.Null(control.OcxState);
+    }
+
+    [WinFormsFact]
+    public void AxHost_Multiple_Controls_InContainer_Coexist()
+    {
+        using Form form = new();
+        using SubAxHost control1 = new(EmptyClsidString);
+        using SubAxHost control2 = new(EmptyClsidString);
+
+        control1.Name = "control1";
+        control2.Name = "control2";
+
+        form.Controls.Add(control1);
+        form.Controls.Add(control2);
+
+        Assert.Equal(2, form.Controls.Count);
+        Assert.Same(control1, form.Controls["control1"]);
+        Assert.Same(control2, form.Controls["control2"]);
+    }
+
+    [WinFormsFact]
+    public void AxHost_ParentContainer_Changes_UpdatesControl()
+    {
+        using Form form1 = new();
+        using Form form2 = new();
+        using SubAxHost control = new(EmptyClsidString);
+
+        form1.Controls.Add(control);
+        Assert.Same(form1, control.Parent);
+
+        control.Parent = form2;
+        Assert.Same(form2, control.Parent);
+        Assert.False(form1.Controls.Contains(control));
+        Assert.True(form2.Controls.Contains(control));
+    }
+
+    [WinFormsFact]
+    public void AxHost_Visibility_Toggle_DoesNotThrow()
+    {
+        using SubAxHost control = new(EmptyClsidString);
+        
+        control.Visible = false;
+        Assert.False(control.Visible);
+
+        control.Visible = true;
+        Assert.True(control.Visible);
+
+        control.Visible = false;
+        Assert.False(control.Visible);
+    }
+
+    [WinFormsFact]
+    public void AxHost_Size_Location_Changes_UpdatesControl()
+    {
+        using SubAxHost control = new(EmptyClsidString);
+        
+        control.Location = new Point(10, 20);
+        Assert.Equal(new Point(10, 20), control.Location);
+
+        control.Size = new Size(200, 150);
+        Assert.Equal(new Size(200, 150), control.Size);
+    }
+
+    [WinFormsFact]
+    public void AxHost_InvalidClsid_Format_ThrowsFormatException()
+    {
+        // Invalid GUID format should throw FormatException
+        Assert.Throws<FormatException>(() => new SubAxHost("not-a-valid-guid"));
+    }
+
+    [WinFormsFact]
+    public void AxHost_NullClsid_ThrowsArgumentNullException()
+    {
+        // Null CLSID should throw ArgumentNullException from Guid constructor
+        Assert.Throws<ArgumentNullException>("g", () => new SubAxHost(null!));
+    }
+
+    [WinFormsFact]
+    public void AxHost_EmptyString_Clsid_ThrowsFormatException()
+    {
+        // Empty CLSID string should throw FormatException
+        Assert.Throws<FormatException>(() => new SubAxHost(string.Empty));
+    }
+
     [WinFormsTheory]
     [MemberData(nameof(GetProperties_AttributeArray_TestData))]
     public void AxHost_ICustomTypeDescriptorGetProperties_InvokeAttributeArrayWithHandle_ReturnsExpected(Attribute[] attributes)

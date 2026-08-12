@@ -10,7 +10,7 @@ namespace System.Windows.Forms;
 ///  A collection of listview groups.
 /// </summary>
 [ListBindable(false)]
-public class ListViewGroupCollection : IList
+public class ListViewGroupCollection : IList, IList<ListViewGroup>
 {
     private readonly ListView _listView;
 
@@ -234,23 +234,23 @@ public class ListViewGroupCollection : IList
         return IndexOf(group);
     }
 
-    public void Insert(int index, ListViewGroup group)
+    public void Insert(int index, ListViewGroup value)
     {
-        ArgumentNullException.ThrowIfNull(group);
+        ArgumentNullException.ThrowIfNull(value);
         ThrowInvalidOperationExceptionIfVirtualMode();
 
-        if (Contains(group))
+        if (Contains(value))
         {
             return;
         }
 
-        CheckListViewItems(group);
-        group.ListView = _listView;
-        List.Insert(index, group);
+        CheckListViewItems(value);
+        value.ListView = _listView;
+        List.Insert(index, value);
         if (_listView.IsHandleCreated)
         {
-            _listView.InsertGroupInListView(index, group);
-            MoveGroupItems(group);
+            _listView.InsertGroupInListView(index, value);
+            MoveGroupItems(value);
         }
     }
 
@@ -307,5 +307,31 @@ public class ListViewGroupCollection : IList
         {
             throw new InvalidOperationException(SR.ListViewCannotAddGroupsToVirtualListView);
         }
+    }
+
+    void ICollection<ListViewGroup>.Add(ListViewGroup item)
+    {
+        Add(item);
+    }
+
+    public void CopyTo(ListViewGroup[] array, int arrayIndex)
+    {
+        List.CopyTo(array, arrayIndex);
+    }
+
+    bool ICollection<ListViewGroup>.Remove(ListViewGroup item)
+    {
+        if (!Contains(item))
+        {
+            return false;
+        }
+
+        Remove(item);
+        return true;
+    }
+
+    IEnumerator<ListViewGroup> IEnumerable<ListViewGroup>.GetEnumerator()
+    {
+        return List.GetEnumerator();
     }
 }

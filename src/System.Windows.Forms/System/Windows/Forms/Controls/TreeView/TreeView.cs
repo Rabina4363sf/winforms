@@ -2023,6 +2023,21 @@ public partial class TreeView : Control
             PInvokeCore.SetWindowLong(this, WINDOW_LONG_PTR_INDEX.GWL_STYLE, style);
         }
 
+        if (Application.IsDarkModeEnabled)
+        {
+            HWND toolTipHandle = (HWND)PInvokeCore.SendMessage(
+                this,
+                PInvoke.TVM_GETTOOLTIPS);
+
+            if (!toolTipHandle.IsNull)
+            {
+                PInvoke.SetWindowTheme(
+                    toolTipHandle,
+                    "DarkMode_Explorer",
+                    null);
+            }
+        }
+
         Color c = BackColor;
 
         if (c != SystemColors.Window || Application.IsDarkModeEnabled)

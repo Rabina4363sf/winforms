@@ -4705,6 +4705,18 @@ public partial class ListView : Control
                 columnHeaderHandle,
                 $"{DarkModeIdentifier}_{ItemsViewThemeIdentifier}",
                 null);
+
+            HWND tooltip = (HWND)PInvokeCore.SendMessage(
+            this,
+            PInvoke.LVM_GETTOOLTIPS);
+
+            if (!tooltip.IsNull)
+            {
+                PInvoke.SetWindowTheme(
+                    tooltip,
+                    "DarkMode_Explorer",
+                    null);
+            }
         }
     }
 

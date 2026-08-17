@@ -12,7 +12,7 @@ public partial class DataGridViewComboBoxCell : DataGridViewCell
     ///  A collection that stores objects.
     /// </summary>
     [ListBindable(false)]
-    public class ObjectCollection : IList
+    public class ObjectCollection : IList, IList<object>
     {
         private readonly DataGridViewComboBoxCell _owner;
         private List<object>? _items;
@@ -188,8 +188,8 @@ public partial class DataGridViewComboBoxCell : DataGridViewCell
         /// <summary>
         ///  Copies the DataGridViewComboBoxCell Items collection to a destination array.
         /// </summary>
-        public void CopyTo(object[] destination, int arrayIndex) =>
-            ((ICollection)InnerArray).CopyTo(destination, arrayIndex);
+        public void CopyTo(object[] array, int arrayIndex) =>
+            ((ICollection)InnerArray).CopyTo(array, arrayIndex);
 
         void ICollection.CopyTo(Array destination, int index) =>
             ((ICollection)InnerArray).CopyTo(destination, index);
@@ -261,5 +261,16 @@ public partial class DataGridViewComboBoxCell : DataGridViewCell
             InnerArray.RemoveAt(index);
             _owner.OnItemsCollectionChanged();
         }
+
+        void ICollection<object>.Add(object item)=> Add(item);
+        bool ICollection<object>.Remove(object item)
+        {
+            int count = Count;
+            Remove(item);
+            return Count < count;
+        }
+
+        IEnumerator<object> IEnumerable<object>.GetEnumerator() => InnerArray.GetEnumerator();
+
     }
 }

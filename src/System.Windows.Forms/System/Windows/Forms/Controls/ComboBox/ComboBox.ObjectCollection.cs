@@ -11,7 +11,7 @@ namespace System.Windows.Forms;
 public partial class ComboBox
 {
     [ListBindable(false)]
-    public partial class ObjectCollection : IList, IComparer<Entry>
+    public partial class ObjectCollection : IList, IList<object>, IComparer<Entry>
     {
         private readonly ComboBox _owner;
         private ComboBoxAccessibleObject? _ownerComboBoxAccessibleObject;
@@ -261,18 +261,18 @@ public partial class ComboBox
         /// <summary>
         ///  Copies the ComboBox Items collection to a destination array.
         /// </summary>
-        public void CopyTo(object[] destination, int arrayIndex)
+        public void CopyTo(object[] array, int arrayIndex)
         {
-            ArgumentNullException.ThrowIfNull(destination);
+            ArgumentNullException.ThrowIfNull(array);
 
             int count = InnerList.Count;
 
             ArgumentOutOfRangeException.ThrowIfNegative(arrayIndex);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(arrayIndex, destination.Length - count);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(arrayIndex, array.Length - count);
 
             for (int i = 0; i < count; i++)
             {
-                destination[i + arrayIndex] = InnerList[i].Item;
+                array[i + arrayIndex] = InnerList[i].Item;
             }
         }
 
@@ -473,6 +473,32 @@ public partial class ComboBox
 
             CompareInfo compInfo = Application.CurrentCulture.CompareInfo;
             return compInfo.Compare(itemName1, itemName2, CompareOptions.StringSort);
+        }
+
+        void ICollection<object>.Add(object item)
+        {
+            Add(item);
+        }
+
+        bool ICollection<object>.Remove(object item)
+        {
+            int index = IndexOf(item);
+
+            if (index < 0)
+            {
+                return false;
+            }
+
+            RemoveAt(index);
+            return true;
+        }
+
+        IEnumerator<object> IEnumerable<object>.GetEnumerator()
+        {
+            foreach (Entry entry in InnerList)
+            {
+                yield return entry.Item;
+            }
         }
     }
 }

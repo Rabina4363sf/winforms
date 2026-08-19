@@ -3099,6 +3099,55 @@ public class AxHostTests
         cookie.Connected.Should().BeTrue();
     }
 
+    [WinFormsFact]
+    public void SubComponentEditor_EditComponent_ThrowsNotImplementedException()
+    {
+        var editor = new SubComponentEditor();
+
+        Assert.Throws<NotImplementedException>(
+            () => editor.EditComponent(null, new object()));
+    }
+
+    [WinFormsFact]
+    public void ValidSelectionStyleAxHost_Ctor_StringInt_Success()
+    {
+        using ValidSelectionStyleAxHost control =
+            new(EmptyClsidString, 0);
+
+        Assert.Equal(0, control.SelectionStyle);
+    }
+
+    [WinFormsFact]
+    public void InvalidSelectionStyleAxHost_Ctor_StringInt_Success()
+    {
+        using InvalidSelectionStyleAxHost control =
+            new(EmptyClsidString, 0);
+
+        Assert.Null(control.SelectionStyle);
+    }
+
+    [WinFormsFact]
+    public void ValidSelectionStyleAxHost_SelectionStyle_SetGet_ReturnsExpected()
+    {
+        using ValidSelectionStyleAxHost control =
+            new(EmptyClsidString);
+
+        control.SelectionStyle = 2;
+
+        Assert.Equal(2, control.SelectionStyle);
+    }
+
+    [WinFormsFact]
+    public void InvalidSelectionStyleAxHost_SelectionStyle_SetGet_ReturnsExpected()
+    {
+        using InvalidSelectionStyleAxHost control =
+            new(EmptyClsidString);
+
+        control.SelectionStyle = "Test";
+
+        Assert.Equal("Test", control.SelectionStyle);
+    }
+
     private class SubComponentEditor : ComponentEditor
     {
         public override bool EditComponent(ITypeDescriptorContext context, object component)

@@ -226,9 +226,10 @@ public partial class ToolTip : Component, IExtenderProvider, IHandle<HWND>
 
             cp.ExStyle = 0;
 
-            if (HasRightToLeft())
+            if (ShouldMirrorToolTipLayout())
             {
-                cp.ExStyle |= (int)WINDOW_EX_STYLE.WS_EX_LAYOUTRTL;
+                cp.ExStyle |= (int)(WINDOW_EX_STYLE.WS_EX_LAYOUTRTL | WINDOW_EX_STYLE.WS_EX_NOINHERITLAYOUT);
+                cp.ExStyle &= ~(int)(WINDOW_EX_STYLE.WS_EX_RTLREADING | WINDOW_EX_STYLE.WS_EX_RIGHT | WINDOW_EX_STYLE.WS_EX_LEFTSCROLLBAR);
             }
 
             cp.Caption = null;
@@ -238,18 +239,18 @@ public partial class ToolTip : Component, IExtenderProvider, IHandle<HWND>
     }
 
     /// <summary>
-    ///  Determines if any associated control has RightToLeft enabled.
+    ///  Determines if any associated control has mirrored
     /// </summary>
-    private bool HasRightToLeft()
+    private bool ShouldMirrorToolTipLayout()
     {
-        if (TopLevelControl is not null && !TopLevelControl.IsDisposed && TopLevelControl.RightToLeft == RightToLeft.Yes)
+        if (TopLevelControl is { IsDisposed: false } topLevelControl && topLevelControl.IsMirrored)
         {
             return true;
         }
 
         foreach (Control control in _tools.Keys)
         {
-            if (control is not null && !control.IsDisposed && control.RightToLeft == RightToLeft.Yes)
+            if (control is { IsDisposed: false } && control.IsMirrored)
             {
                 return true;
             }

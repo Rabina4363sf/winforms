@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Drawing;
@@ -243,8 +243,36 @@ public class LinkLabelTests : IDisposable
         layoutCalled.Should().BeTrue();
     }
 
+    [WinFormsTheory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void LinkLabel_OnPaint_EmptyText_DoesNotKeepInvalidating(string? text)
+    {
+        // Regression test for https://github.com/dotnet/winforms/issues/10515: painting a LinkLabel without text
+        // used to rebuild the link collection on every paint, and each rebuild invalidated the control again,
+        // which resulted in an endless paint loop.
+        using TestLinkLabel linkLabel = new() { Size = new Size(100, 20), Text = text };
+        linkLabel.CreateControl();
+
+        using Bitmap bitmap = new(linkLabel.Width, linkLabel.Height);
+        using Graphics graphics = Graphics.FromImage(bitmap);
+        using PaintEventArgs e = new(graphics, linkLabel.ClientRectangle);
+
+        // The first paint calculates the text layout and is allowed to invalidate the control.
+        linkLabel.OnPaint(e);
+
+        int invalidatedCount = 0;
+        linkLabel.Invalidated += (sender, args) => invalidatedCount++;
+
+        linkLabel.OnPaint(e);
+        linkLabel.OnPaint(e);
+
+        invalidatedCount.Should().Be(0);
+    }
+
     private class TestLinkLabel : LinkLabel
     {
         public new void OnLinkClicked(LinkLabelLinkClickedEventArgs e) => base.OnLinkClicked(e);
+        public new void OnPaint(PaintEventArgs e) => base.OnPaint(e);
     }
 }

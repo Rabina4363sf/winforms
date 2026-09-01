@@ -3,7 +3,6 @@
 
 using System.Collections;
 using System.ComponentModel;
-using System.Data;
 using System.Drawing;
 using System.Globalization;
 using System.Runtime.CompilerServices;
@@ -13641,64 +13640,24 @@ public partial class DataGridView
 
             if (CanSort(dataGridViewColumn))
             {
-                // Check if Shift key is pressed for multi-column sorting
-                if ((ModifierKeys & Keys.Shift) == Keys.Shift)
+                ListSortDirection direction = ListSortDirection.Ascending;
+
+                if (SortedColumn == dataGridViewColumn)
                 {
-                    // Multi-column sorting with Shift+Click
-                    string columnName = dataGridViewColumn.DataPropertyName;
-                    
-                    if (_sortedColumnNames.Contains(columnName))
+                    Debug.Assert(SortOrder != SortOrder.None);
+                    if (SortOrder == SortOrder.Ascending)
                     {
-                        _sortedColumnNames.Remove(columnName);
-                    }
-                    
-                    _sortedColumnNames.Insert(0, columnName);
-                    
-                    if ((DataSource is not null)
-                        && (DataConnection!.List is IBindingList)
-                        && ((IBindingList)DataConnection.List).SupportsSorting
-                        && dataGridViewColumn.IsDataBound)
-                    {
-                        // Build sort string from the list of sorted columns
-                        string sortString = string.Join(", ", 
-                            _sortedColumnNames.Select(c => $"{c} ASC"));
-                        
-                        // Apply sorting via DataView if available
-                        if (DataSource is DataView dataView)
-                        {
-                            dataView.Sort = sortString;
-                        }
-                        else if (DataSource is DataTable dataTable)
-                        {
-                            dataTable.DefaultView.Sort = sortString;
-                        }
+                        direction = ListSortDirection.Descending;
                     }
                 }
-                else
+
+                if ((DataSource is null)
+                    || (DataSource is not null
+                        && (DataConnection!.List is IBindingList)
+                        && ((IBindingList)DataConnection.List).SupportsSorting
+                        && dataGridViewColumn.IsDataBound))
                 {
-                    // Single-column sorting with regular Click
-                    _sortedColumnNames.Clear();
-                    _sortedColumnNames.Add(dataGridViewColumn.DataPropertyName);
-                    
-                    ListSortDirection direction = ListSortDirection.Ascending;
-
-                    if (SortedColumn == dataGridViewColumn)
-                    {
-                        Debug.Assert(SortOrder != SortOrder.None);
-                        if (SortOrder == SortOrder.Ascending)
-                        {
-                            direction = ListSortDirection.Descending;
-                        }
-                    }
-
-                    if ((DataSource is null)
-                        || (DataSource is not null
-                            && (DataConnection!.List is IBindingList)
-                            && ((IBindingList)DataConnection.List).SupportsSorting
-                            && dataGridViewColumn.IsDataBound))
-                    {
-                        Sort(dataGridViewColumn, direction);
-                    }
+                    Sort(dataGridViewColumn, direction);
                 }
             }
         }

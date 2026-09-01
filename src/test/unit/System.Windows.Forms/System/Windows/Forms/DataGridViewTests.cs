@@ -3476,6 +3476,32 @@ public partial class DataGridViewTests : IDisposable
         callCount.Should().Be(1);
     }
 
+    [WinFormsTheory]
+    [InlineData(ListSortDirection.Ascending, new[] { "1", "2", "5", "3", "4", "6" })]
+    [InlineData(ListSortDirection.Descending, new[] { "5", "2", "1", "6", "4", "3" })]
+    public void DataGridView_Sort_UnboundRowsPreservesPreviousOrder(
+        ListSortDirection firstSortDirection,
+        string[] expectedOrder)
+    {
+        _dataGridView.AllowUserToAddRows = false;
+        _dataGridView.Columns.Add("First", "First");
+        _dataGridView.Columns.Add("Second", "Second");
+        _dataGridView.Rows.Add("3", "B");
+        _dataGridView.Rows.Add("1", "A");
+        _dataGridView.Rows.Add("4", "B");
+        _dataGridView.Rows.Add("2", "A");
+        _dataGridView.Rows.Add("6", "B");
+        _dataGridView.Rows.Add("5", "A");
+
+        _dataGridView.Sort(_dataGridView.Columns["First"], firstSortDirection);
+        _dataGridView.Sort(_dataGridView.Columns["Second"], ListSortDirection.Ascending);
+
+        string[] actualOrder = Enumerable.Range(0, _dataGridView.RowCount)
+            .Select(rowIndex => (string)_dataGridView.Rows[rowIndex].Cells["First"].Value)
+            .ToArray();
+        actualOrder.Should().Equal(expectedOrder);
+    }
+
     [WinFormsFact]
     public void DataGridView_BackColorChangedEvent_Raised_Success()
     {

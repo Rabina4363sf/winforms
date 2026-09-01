@@ -368,9 +368,6 @@ public partial class DataGridView : Control, ISupportInitialize
 
     private ToolTipBuffer _toolTipBuffer;
 
-    // Tracks the ordered list of columns for multi-column sorting
-    private readonly List<string> _sortedColumnNames = new();
-
 #if DEBUG
     // set to false when the grid is not in sync with the underlying data store
     // in virtual mode, and OnCellValueNeeded cannot be called.

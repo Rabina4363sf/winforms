@@ -4,7 +4,10 @@
 #nullable disable
 
 using System.ComponentModel;
+using System.ComponentModel.Design;
 using System.Drawing;
+using System.Drawing.Design;
+using System.Reflection;
 using System.Windows.Forms.Automation;
 using Microsoft.DotNet.RemoteExecutor;
 using Windows.Win32.UI.Accessibility;
@@ -190,6 +193,27 @@ public class ListViewTests
         listView.Activation = value;
         Assert.Equal(value, listView.Activation);
         Assert.False(listView.IsHandleCreated);
+    }
+
+    [WinFormsFact]
+    public void TEMP_DIAGNOSTIC_ListView_Group_SetBeforeAdd()
+    {
+        using ListView listView = new();
+        ListViewGroup group1 = new("Group1");
+        listView.Groups.Add(group1);
+
+        ListViewItem item = new("Item1");
+        item.Group = group1;
+        listView.Items.Add(item);
+
+        CollectionEditor editor = (CollectionEditor)TypeDescriptor.GetProperties(listView)[nameof(ListView.Items)].GetEditor(typeof(UITypeEditor));
+        editor.GetType().GetMethod(
+            "SetItems",
+            BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(editor, new object[] { listView.Items, new object[] { item } });
+
+        Assert.Same(group1, item.Group);
+        Assert.Contains(item, group1.Items.Cast<ListViewItem>());
     }
 
     [WinFormsTheory]

@@ -49,4 +49,29 @@ internal class ListViewItemCollectionEditor : CollectionEditor
 
         return text;
     }
+
+    protected override object SetItems(object editValue, object[] value)
+    {
+        ListViewGroup[] groups = new ListViewGroup[value.Length];
+
+        for (int i = 0; i < value.Length; i++)
+        {
+            if (value[i] is ListViewItem item)
+            {
+                groups[i] = item.Group;
+            }
+        }
+
+        object result = base.SetItems(editValue, value);
+
+        for (int i = 0; i < value.Length; i++)
+        {
+            if (groups[i] is not null && value[i] is ListViewItem item)
+            {
+                item.Group = groups[i];
+            }
+        }
+
+        return result;
+    }
 }

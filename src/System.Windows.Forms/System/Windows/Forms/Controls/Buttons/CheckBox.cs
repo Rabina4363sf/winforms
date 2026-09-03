@@ -99,18 +99,7 @@ public partial class CheckBox : ButtonBase
             // Appearance.ToggleSwitch intentionally wins over FlatStyle.System: a toggle has no
             // native BS_GROUPBOX rendering and must remain owner-drawn so the requested appearance
             // is never ignored and mouse-state geometry is always available.
-            IsToggleSwitchAppearance
-            ||
-            // We want NO owner draw ONLY when we're
-            // * In Dark Mode
-            // * When _then_ the Appearance is Button
-            // * But then ONLY when we're rendering with FlatStyle.Standard
-            //   (because that would let us usually let us draw with the VisualStyleRenderers,
-            //   which cause HighDPI issues in Dark Mode).
-            ((!Application.IsDarkModeEnabled
-                || Appearance != Appearance.Button
-                || FlatStyle != FlatStyle.Standard)
-                && base.OwnerDraw);
+            IsToggleSwitchAppearance || base.OwnerDraw;
 
     /// <summary>
     ///  Gets a value indicating whether the check box should render as the modern, animated toggle switch.

@@ -7,6 +7,7 @@ using System.ComponentModel;
 using System.ComponentModel.Design;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Windows.Forms.TestUtilities;
 using Moq;
@@ -19,10 +20,73 @@ using Size = System.Drawing.Size;
 namespace System.Windows.Forms.Tests;
 
 [Collection("Sequential")] // workaround for WebBrowser control corrupting memory when run on multiple UI threads (instantiated via GUID)
-public class AxHostTests
+public unsafe class AxHostTests
 {
     private const string EmptyClsidString = "00000000-0000-0000-0000-000000000000";
     private const string WebBrowserClsidString = "8856f961-340a-11d0-a96b-00c04fd705a2";
+
+    [Theory]
+    [InlineData("8856f961-340a-11d0-a96b-00c04fd705a2")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void AxHost_ClsidAttribute_Ctor_SetsValue(string clsid)
+    {
+        AxHost.ClsidAttribute attribute = new(clsid);
+
+        Assert.Equal(clsid, attribute.Value);
+    }
+
+    [Theory]
+    [InlineData(AxHost.ActiveXInvokeKind.MethodInvoke)]
+    [InlineData(AxHost.ActiveXInvokeKind.PropertyGet)]
+    [InlineData(AxHost.ActiveXInvokeKind.PropertySet)]
+    public void AxHost_InvalidActiveXStateException_ToString_ReturnsExpectedMessage(AxHost.ActiveXInvokeKind kind)
+    {
+        AxHost.InvalidActiveXStateException exception = new("DoWork", kind);
+        string expected = kind switch
+        {
+            AxHost.ActiveXInvokeKind.MethodInvoke => string.Format(SR.AXInvalidMethodInvoke, "DoWork"),
+            AxHost.ActiveXInvokeKind.PropertyGet => string.Format(SR.AXInvalidPropertyGet, "DoWork"),
+            AxHost.ActiveXInvokeKind.PropertySet => string.Format(SR.AXInvalidPropertySet, "DoWork"),
+            _ => throw new InvalidOperationException()
+        };
+
+        Assert.Equal(expected, exception.ToString());
+    }
+
+    [Fact]
+    public void AxHost_StateConverter_ConvertToNull_ReturnsEmptyByteArray()
+    {
+        AxHost.StateConverter converter = new();
+
+        Assert.Empty((byte[])converter.ConvertTo(null, null, null, typeof(byte[])));
+    }
+
+    [Fact]
+    public void AxHost_TypeLibraryTimeStampAttribute_Ctor_ParsesTimestamp()
+    {
+        DateTime expected = new(2024, 1, 30, 13, 45, 0);
+        AxHost.TypeLibraryTimeStampAttribute attribute = new(expected.ToString(CultureInfo.InvariantCulture));
+
+        Assert.Equal(expected, attribute.Value);
+    }
+
+    [Fact]
+    public void AxHost_EnumUnknown_Next_ReturnsElementsInOrder()
+    {
+        object[] items = [new(), new()];
+        IEnumUnknown.Interface enumUnknown = new AxHost.EnumUnknown(items);
+
+        IUnknown* fetched = null;
+        uint fetchedCount;
+        HRESULT result = enumUnknown.Next(1, &fetched, &fetchedCount);
+
+        Assert.Equal(HRESULT.S_OK, result);
+        Assert.Equal(1u, fetchedCount);
+        Assert.True(ComHelpers.TryGetObjectForIUnknown(fetched, out object item));
+        Assert.Same(items[0], item);
+        fetched->Release();
+    }
 
     [WinFormsTheory]
     [InlineData(EmptyClsidString)]

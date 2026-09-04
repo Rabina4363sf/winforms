@@ -1,7 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Concurrent;
 using System.Drawing.Imaging;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using Windows.Win32;
@@ -664,6 +666,65 @@ public class ImageTests
         using Bitmap bitmap = new(1, 1);
         string badTarget = Path.Join("NoSuchDirectory", "NoSuchFile");
         AssertExtensions.Throws<DirectoryNotFoundException>(() => bitmap.Save(badTarget), $"The directory NoSuchDirectory of the filename {badTarget} does not exist.");
+    }
+
+    // Regression test for https://github.com/dotnet/winforms/issues/14884.
+    //
+    // ImageCodecInfoHelper caches the encoder CLSIDs in a static array field (s_encoders). The cache used to be
+    // published (assigned to the static field) before its elements were populated, so a thread that was still in
+    // the middle of filling the array in could race with another thread that observed the non-null, but not yet
+    // fully populated, array. The racing thread would see (Guid.Empty, Guid.Empty) entries and Image.Save would
+    // then throw ArgumentNullException for the "encoder" parameter, even though a valid encoder exists.
+
+    [Fact]
+    public void GetEncoderClsid_ConcurrentAccess_NeverReturnsEmptyGuidForKnownFormat()
+    {
+        Guid expectedPngEncoder = ImageCodecInfo.GetImageEncoders().Single(codec => codec.FormatID == ImageFormat.Png.Guid).Clsid;
+
+        for (int iteration = 0; iteration < 10; iteration++)
+        {
+            // Force the helper to rebuild its cache from scratch on the next access so this test exercises the
+            // publish-before-populate race on every iteration, rather than relying on the cache already
+            // populated by a prior test.
+            ResetEncoderCache();
+
+            ConcurrentBag<Guid> results = [];
+            Parallel.For(0, Environment.ProcessorCount * 4, _ => results.Add(ImageCodecInfoHelper.GetEncoderClsid(ImageFormat.Png.Guid)));
+
+            Assert.All(results, actualEncoder => Assert.Equal(expectedPngEncoder, actualEncoder));
+        }
+    }
+
+    // Regression test for https://github.com/dotnet/winforms/issues/14884. Mirrors the reproduction from the
+    // issue: multiple threads saving different bitmaps concurrently used to intermittently fail with
+    // "System.ArgumentNullException : Value cannot be null. (Parameter 'encoder')".
+    [Fact]
+    public void Save_ConcurrentThreads_DoesNotThrowArgumentNullException()
+    {
+        ResetEncoderCache();
+
+        Bitmap[] bitmaps = [.. Enumerable.Range(0, 10).Select(_ => new Bitmap(16, 16))];
+        try
+        {
+            Parallel.ForEach(bitmaps, bitmap =>
+            {
+                using MemoryStream stream = new();
+                bitmap.Save(stream, ImageFormat.Png);
+            });
+        }
+        finally
+        {
+            foreach (Bitmap bitmap in bitmaps)
+            {
+                bitmap.Dispose();
+            }
+        }
+    }
+
+    private static void ResetEncoderCache()
+    {
+        FieldInfo field = typeof(ImageCodecInfoHelper).GetField("s_encoders", BindingFlags.Static | BindingFlags.NonPublic)!;
+        field.SetValue(null, null);
     }
 
     [Fact]

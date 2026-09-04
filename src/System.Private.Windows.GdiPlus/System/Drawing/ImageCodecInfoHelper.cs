@@ -49,12 +49,16 @@ internal static class ImageCodecInfoHelper
                 {
                     PInvokeGdiPlus.GdipGetImageEncoders(numEncoders, size, (ImageCodecInfo*)b).ThrowIfFailed();
                     ReadOnlySpan<ImageCodecInfo> codecInfo = new((ImageCodecInfo*)b, (int)numEncoders);
-                    s_encoders = new (Guid Format, Guid Encoder)[codecInfo.Length];
+
+                    // Build the cache locally and publish it only after every entry has been populated.
+                    var encoders = new (Guid Format, Guid Encoder)[codecInfo.Length];
 
                     for (int i = 0; i < codecInfo.Length; i++)
                     {
-                        s_encoders[i] = (codecInfo[i].FormatID, codecInfo[i].Clsid);
+                        encoders[i] = (codecInfo[i].FormatID, codecInfo[i].Clsid);
                     }
+
+                    s_encoders = encoders;
                 }
             }
 

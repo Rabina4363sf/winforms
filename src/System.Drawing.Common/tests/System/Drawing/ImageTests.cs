@@ -668,8 +668,7 @@ public class ImageTests
         AssertExtensions.Throws<DirectoryNotFoundException>(() => bitmap.Save(badTarget), $"The directory NoSuchDirectory of the filename {badTarget} does not exist.");
     }
 
-    // Regression test for https://github.com/dotnet/winforms/issues/14884.
-    //
+    // Regression test for https://github.com/dotnet/winforms/issues/14884.    //
     // ImageCodecInfoHelper caches the encoder CLSIDs in a static array field (s_encoders). The cache used to be
     // published (assigned to the static field) before its elements were populated, so a thread that was still in
     // the middle of filling the array in could race with another thread that observed the non-null, but not yet

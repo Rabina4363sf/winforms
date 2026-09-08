@@ -26,6 +26,10 @@ namespace System.Drawing
         public Bitmap(System.Type type, string resource) { throw new System.PlatformNotSupportedException(System.SR.SystemDrawingCommon_PlatformNotSupported);  }
         public System.Drawing.Bitmap Clone(System.Drawing.Rectangle rect, System.Drawing.Imaging.PixelFormat format) { throw new System.PlatformNotSupportedException(System.SR.SystemDrawingCommon_PlatformNotSupported);  }
         public System.Drawing.Bitmap Clone(System.Drawing.RectangleF rect, System.Drawing.Imaging.PixelFormat format) { throw new System.PlatformNotSupportedException(System.SR.SystemDrawingCommon_PlatformNotSupported);  }
+#if NET11_0_OR_GREATER
+        public void Clear(System.Drawing.Color color) { throw new System.PlatformNotSupportedException(System.SR.SystemDrawingCommon_PlatformNotSupported);  }
+        public void Draw(System.Drawing.Bitmap otherBitmap, System.Drawing.Rectangle bounds, bool blendPixels) { throw new System.PlatformNotSupportedException(System.SR.SystemDrawingCommon_PlatformNotSupported);  }
+#endif
         public static System.Drawing.Bitmap FromHicon(System.IntPtr hicon) { throw new System.PlatformNotSupportedException(System.SR.SystemDrawingCommon_PlatformNotSupported);  }
         public static System.Drawing.Bitmap FromResource(System.IntPtr hinstance, string bitmapName) { throw new System.PlatformNotSupportedException(System.SR.SystemDrawingCommon_PlatformNotSupported);  }
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]

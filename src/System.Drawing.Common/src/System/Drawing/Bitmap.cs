@@ -294,6 +294,155 @@ public sealed unsafe class Bitmap : Image, IPointer<GpBitmap>, IBitmap
         GC.KeepAlive(this);
     }
 
+#if NET11_0_OR_GREATER
+    /// <summary>
+    ///  Fills the entire bitmap with the specified color.
+    /// </summary>
+    /// <param name="color">The color with which to fill the bitmap.</param>
+    /// <exception cref="NotSupportedException">
+    ///  The bitmap does not use a 32-bit pixel format.
+    /// </exception>
+    public void Clear(Color color)
+    {
+        Ensure32BitsPerPixel();
+
+        int width = Width;
+        int height = Height;
+        if (height == 0 || width == 0)
+        {
+            return;
+        }
+
+        BitmapData bitmapData = LockBits(
+            new Rectangle(0, 0, width, height),
+            ImageLockMode.WriteOnly,
+            PixelFormat.Format32bppArgb);
+
+        try
+        {
+            int stride = bitmapData.Stride;
+            int colorValue = color.ToArgb();
+
+            for (int y = 0; y < height; y++)
+            {
+                Span<int> row = new(
+                    (void*)((byte*)bitmapData.Scan0 + (y * stride)),
+                    width);
+                row.Fill(colorValue);
+            }
+        }
+        finally
+        {
+            UnlockBits(bitmapData);
+        }
+    }
+
+    /// <summary>
+    ///  Draws another 32-bit bitmap into the specified bounds.
+    /// </summary>
+    /// <param name="otherBitmap">The bitmap to draw.</param>
+    /// <param name="bounds">The destination bounds within this bitmap.</param>
+    /// <param name="blendPixels">
+    ///  <see langword="true"/> to alpha blend the source pixels with the destination pixels;
+    ///  <see langword="false"/> to replace the destination pixels.
+    /// </param>
+    /// <exception cref="ArgumentNullException"><paramref name="otherBitmap"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="bounds"/> is not contained in this bitmap.</exception>
+    /// <exception cref="NotSupportedException">
+    ///  Either bitmap does not use a 32-bit pixel format.
+    /// </exception>
+    public void Draw(Bitmap otherBitmap, Rectangle bounds, bool blendPixels)
+    {
+        ArgumentNullException.ThrowIfNull(otherBitmap);
+        Ensure32BitsPerPixel();
+        otherBitmap.Ensure32BitsPerPixel();
+
+        if (bounds.Width <= 0
+            || bounds.Height <= 0
+            || bounds.Left < 0
+            || bounds.Top < 0
+            || bounds.Right > Width
+            || bounds.Bottom > Height)
+        {
+            throw new ArgumentException(SR.GdiplusInvalidRectangle, nameof(bounds));
+        }
+
+        Bitmap? sourceCopy = ReferenceEquals(this, otherBitmap) ? new(otherBitmap) : null;
+        Bitmap source = sourceCopy ?? otherBitmap;
+        BitmapData sourceData = source.LockBits(
+            new Rectangle(0, 0, source.Width, source.Height),
+            ImageLockMode.ReadOnly,
+            PixelFormat.Format32bppArgb);
+
+        try
+        {
+            BitmapData destinationData = LockBits(bounds, ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
+
+            try
+            {
+                for (int y = 0; y < bounds.Height; y++)
+                {
+                    int sourceY = y * source.Height / bounds.Height;
+                    Span<int> sourceRow = new(
+                        (void*)((byte*)sourceData.Scan0 + (sourceY * sourceData.Stride)),
+                        source.Width);
+                    Span<int> destinationRow = new(
+                        (void*)((byte*)destinationData.Scan0 + (y * destinationData.Stride)),
+                        bounds.Width);
+
+                    for (int x = 0; x < bounds.Width; x++)
+                    {
+                        int sourcePixel = sourceRow[x * source.Width / bounds.Width];
+                        destinationRow[x] = blendPixels
+                            ? Blend(sourcePixel, destinationRow[x])
+                            : sourcePixel;
+                    }
+                }
+            }
+            finally
+            {
+                UnlockBits(destinationData);
+            }
+        }
+        finally
+        {
+            source.UnlockBits(sourceData);
+            sourceCopy?.Dispose();
+        }
+    }
+
+    private void Ensure32BitsPerPixel()
+    {
+        PixelFormat pixelFormat = PixelFormat;
+        if (pixelFormat is not (PixelFormat.Format32bppArgb or PixelFormat.Format32bppRgb or PixelFormat.Format32bppPArgb))
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    private static int Blend(int source, int destination)
+    {
+        int sourceAlpha = (source >> 24) & 0xFF;
+        int inverseSourceAlpha = 255 - sourceAlpha;
+        int destinationAlpha = (destination >> 24) & 0xFF;
+        int alpha = sourceAlpha + ((destinationAlpha * inverseSourceAlpha + 127) / 255);
+
+        if (alpha == 0)
+        {
+            return 0;
+        }
+
+        int red = (((source >> 16) & 0xFF) * sourceAlpha
+            + (((destination >> 16) & 0xFF) * destinationAlpha * inverseSourceAlpha + 127) / 255) / alpha;
+        int green = (((source >> 8) & 0xFF) * sourceAlpha
+            + (((destination >> 8) & 0xFF) * destinationAlpha * inverseSourceAlpha + 127) / 255) / alpha;
+        int blue = ((source & 0xFF) * sourceAlpha
+            + ((destination & 0xFF) * destinationAlpha * inverseSourceAlpha + 127) / 255) / alpha;
+
+        return (alpha << 24) | (red << 16) | (green << 8) | blue;
+    }
+#endif
+
     public Color GetPixel(int x, int y)
     {
         if (x < 0 || x >= Width)

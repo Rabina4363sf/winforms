@@ -1282,6 +1282,50 @@ public class ControlControlCollectionTests
     }
 
     [WinFormsFact]
+    public void ControlCollection_AddRange_ReadOnlySpan_Success()
+    {
+        using Control owner = new();
+        using Control child1 = new();
+        using Control child2 = new();
+        Control.ControlCollection collection = owner.Controls;
+        ReadOnlySpan<Control> controls = [child1, child2];
+
+        collection.AddRange(controls);
+
+        Assert.Equal([child1, child2], collection.Cast<Control>());
+    }
+
+    [WinFormsFact]
+    public void ControlCollection_AddRange_IEnumerable_Success()
+    {
+        using Control owner = new();
+        using Control child1 = new();
+        using Control child2 = new();
+        Control.ControlCollection collection = owner.Controls;
+        IEnumerable<Control> controls = [child1, child2];
+
+        collection.AddRange(controls);
+
+        Assert.Equal([child1, child2], collection.Cast<Control>());
+    }
+
+    [WinFormsFact]
+    public void ControlCollection_IEnumerable_GetEnumerator_ReturnsTypedControls()
+    {
+        using Control owner = new();
+        using Control child1 = new();
+        using Control child2 = new();
+
+        Control.ControlCollection collection = owner.Controls;
+        collection.Add(child1);
+        collection.Add(child2);
+
+        IEnumerable<Control> controls = collection;
+
+        Assert.Equal([child1, child2], controls);
+    }
+
+    [WinFormsFact]
     public void ControlCollection_Clear_Invoke_Success()
     {
         using Control owner = new();

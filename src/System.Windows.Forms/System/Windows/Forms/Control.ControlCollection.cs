@@ -13,7 +13,7 @@ public partial class Control
     ///  Collection of controls...
     /// </summary>
     [ListBindable(false)]
-    public partial class ControlCollection : ArrangedElementCollection, IList, ICloneable
+    public partial class ControlCollection : ArrangedElementCollection, IList, IEnumerable<Control>, ICloneable
     {
         /// A caching mechanism for key accessor
         /// We use an index here rather than control so that we don't have lifetime
@@ -152,6 +152,26 @@ public partial class Control
             }
         }
 
+        /// <summary>
+        ///  Adds a range of child controls to this control.
+        /// </summary>
+        public void AddRange(params ReadOnlySpan<Control> controls)
+        {
+            Control[] controlArray = [.. controls];
+            AddRange(controlArray);
+        }
+
+        /// <summary>
+        ///  Adds a sequence of child controls to this control.
+        /// </summary>
+        public void AddRange(IEnumerable<Control> controls)
+        {
+            ArgumentNullException.ThrowIfNull(controls);
+
+            Control[] controlArray = [.. controls];
+            AddRange(controlArray);
+        }
+
         object ICloneable.Clone()
         {
             // Use CreateControlInstance so we get the same type of ControlCollection, but whack the
@@ -227,6 +247,15 @@ public partial class Control
         public override IEnumerator GetEnumerator()
         {
             return new ControlCollectionEnumerator(this);
+        }
+
+        IEnumerator<Control> IEnumerable<Control>.GetEnumerator()
+        {
+            IEnumerator enumerator = GetEnumerator();
+            while (enumerator.MoveNext())
+            {
+                yield return (Control)enumerator.Current!;
+            }
         }
 
         public int IndexOf(Control? control) => ((IList)InnerList).IndexOf(control);

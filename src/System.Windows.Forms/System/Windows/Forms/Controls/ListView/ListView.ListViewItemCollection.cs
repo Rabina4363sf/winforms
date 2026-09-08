@@ -12,7 +12,7 @@ public partial class ListView
     ///  Represents the collection of items in a ListView or ListViewGroup
     /// </summary>
     [ListBindable(false)]
-    public partial class ListViewItemCollection : IList
+    public partial class ListViewItemCollection : IList, IList<ListViewItem>
     {
         /// A caching mechanism for key accessor
         /// We use an index here rather than control so that we don't have lifetime
@@ -220,6 +220,26 @@ public partial class ListView
             InnerList.AddRange(items);
         }
 
+        /// <summary>
+        ///  Adds a range of items to the collection.
+        /// </summary>
+        public void AddRange(params ReadOnlySpan<ListViewItem> items)
+        {
+            ListViewItem[] itemArray = [.. items];
+            AddRange(itemArray);
+        }
+
+        /// <summary>
+        ///  Adds a sequence of items to the collection.
+        /// </summary>
+        public void AddRange(IEnumerable<ListViewItem> collection)
+        {
+            ArgumentNullException.ThrowIfNull(collection);
+
+            ListViewItem[] itemArray = [.. collection];
+            AddRange(itemArray);
+        }
+
         public void AddRange(ListViewItemCollection items)
         {
             ArgumentNullException.ThrowIfNull(items);
@@ -256,6 +276,16 @@ public partial class ListView
         public void CopyTo(Array dest, int index)
         {
             InnerList.CopyTo(dest, index);
+        }
+
+        /// <summary>
+        ///  Copies the entire collection of items to a compatible one-dimensional array, starting at the specified index of the target array.
+        /// </summary>
+        public void CopyTo(ListViewItem[] array, int arrayIndex)
+        {
+            ArgumentNullException.ThrowIfNull(array);
+
+            CopyTo((Array)array, arrayIndex);
         }
 
         /// <summary>
@@ -313,6 +343,15 @@ public partial class ListView
             return InnerList.GetEnumerator();
         }
 
+        IEnumerator<ListViewItem> IEnumerable<ListViewItem>.GetEnumerator()
+        {
+            IEnumerator enumerator = GetEnumerator();
+            while (enumerator.MoveNext())
+            {
+                yield return (ListViewItem)enumerator.Current!;
+            }
+        }
+
         public int IndexOf(ListViewItem item)
         {
             for (int index = 0; index < Count; ++index)
@@ -328,6 +367,8 @@ public partial class ListView
 
         int IList.IndexOf(object? item)
             => item is ListViewItem listViewItem ? IndexOf(listViewItem) : -1;
+
+        void ICollection<ListViewItem>.Add(ListViewItem item) => Add(item);
 
         /// <summary>
         ///  The zero-based index of the first occurrence of value within the entire CollectionBase, if found; otherwise, -1.
@@ -391,6 +432,8 @@ public partial class ListView
             return Insert(index, new ListViewItem(text, imageIndex));
         }
 
+        void IList<ListViewItem>.Insert(int index, ListViewItem item) => Insert(index, item);
+
         void IList.Insert(int index, object? item)
         {
             if (item is ListViewItem listViewItem)
@@ -428,6 +471,17 @@ public partial class ListView
         public virtual void Remove(ListViewItem item)
         {
             InnerList.Remove(item);
+        }
+
+        bool ICollection<ListViewItem>.Remove(ListViewItem item)
+        {
+            if (!Contains(item))
+            {
+                return false;
+            }
+
+            Remove(item);
+            return true;
         }
 
         /// <summary>

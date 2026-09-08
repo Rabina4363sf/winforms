@@ -100,4 +100,64 @@ public class ListView_ListViewItemCollectionTests
         Assert.Throws<ArgumentNullException>("key", () => collection.Find(key, searchAllSubItems: true));
         Assert.Throws<ArgumentNullException>("key", () => collection.Find(key, searchAllSubItems: false));
     }
+
+    [WinFormsFact]
+    public void ListViewItemCollection_AddRange_ReadOnlySpan_Success()
+    {
+        using ListView listView = new();
+        ListViewItem item1 = new("item1");
+        ListViewItem item2 = new("item2");
+        ReadOnlySpan<ListViewItem> items = [item1, item2];
+
+        listView.Items.AddRange(items);
+
+        Assert.Equal([item1, item2], listView.Items.Cast<ListViewItem>());
+    }
+
+    [WinFormsFact]
+    public void ListViewItemCollection_AddRange_IEnumerable_Success()
+    {
+        using ListView listView = new();
+        ListViewItem item1 = new("item1");
+        ListViewItem item2 = new("item2");
+        IEnumerable<ListViewItem> items = [item1, item2];
+
+        listView.Items.AddRange(items);
+
+        Assert.Equal([item1, item2], listView.Items.Cast<ListViewItem>());
+    }
+
+    [WinFormsFact]
+    public void ListViewItemCollection_IList_Success()
+    {
+        using ListView listView = new();
+        IList<ListViewItem> collection = listView.Items;
+        ListViewItem addedItem = new("added");
+        ListViewItem insertedItem = new("inserted");
+
+        collection.Add(addedItem);
+        collection.Insert(0, insertedItem);
+
+        ListViewItem[] copiedItems = new ListViewItem[collection.Count];
+        listView.Items.CopyTo(copiedItems, 0);
+
+        Assert.Equal([insertedItem, addedItem], copiedItems);
+        Assert.True(collection.Remove(addedItem));
+        Assert.Equal([insertedItem], collection);
+        Assert.False(collection.Remove(addedItem));
+    }
+
+    [WinFormsFact]
+    public void ListViewItemCollection_IEnumerable_GetEnumerator_ReturnsTypedItems()
+    {
+        using ListView listView = new();
+        ListViewItem item1 = new("item1");
+        ListViewItem item2 = new("item2");
+        listView.Items.Add(item1);
+        listView.Items.Add(item2);
+
+        IEnumerable<ListViewItem> items = listView.Items;
+
+        Assert.Equal([item1, item2], items);
+    }
 }

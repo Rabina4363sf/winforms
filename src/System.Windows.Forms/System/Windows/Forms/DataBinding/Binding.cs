@@ -186,9 +186,14 @@ public partial class Binding
     }
 
     /// <summary>
-    ///  Instance-specific property equivalent to the static method above
+    ///  Gets a value indicating whether this binding can be activated for its target.
+    ///  A visibility binding must remain active while a control is hidden so that a
+    ///  change in the data source can make the control visible.
     /// </summary>
-    internal bool ComponentCreated => IsComponentCreated(BindableComponent);
+    internal bool ComponentCreated =>
+        IsComponentCreated(BindableComponent)
+        || (BindableComponent is Control
+            && string.Equals(PropertyName, nameof(Control.Visible), StringComparison.OrdinalIgnoreCase));
 
     private void FormLoaded(object? sender, EventArgs e)
     {
@@ -218,8 +223,10 @@ public partial class Binding
             }
 
             // We are essentially doing to the listManager what we were doing to the
-            // BindToObject: bind only when the control is created and it has a BindingContext
-            BindingContext.UpdateBinding((BindableComponent is not null && IsComponentCreated(BindableComponent) ? BindableComponent.BindingContext : null), this);
+            // BindToObject: bind only when the control is created and it has a BindingContext.
+            // Visibility bindings are also initialized before a control is created so that
+            // a data-source change can make an initially hidden control visible.
+            BindingContext.UpdateBinding((BindableComponent is not null && ComponentCreated ? BindableComponent.BindingContext : null), this);
             if (value is Form form)
             {
                 form.Load += FormLoaded;

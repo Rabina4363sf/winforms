@@ -360,6 +360,7 @@ public partial class BindingContext : ICollection
 
             BindingManagerBase newManager = newBindingContext.EnsureListManager(binding.DataSource!, binding.BindingMemberInfo.BindingPath);
             newManager.Bindings.Add(binding);
+            binding.UpdateIsBinding();
         }
     }
 }

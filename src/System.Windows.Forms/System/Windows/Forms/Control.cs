@@ -4507,7 +4507,7 @@ public unsafe partial class Control :
                 RaiseVisualStylesModeChanged(oldEffectiveVisualStylesMode, EffectiveVisualStylesMode);
             }
 
-            if (!Properties.ContainsKey(s_bindingManagerProperty) && Created)
+            if (!Properties.ContainsKey(s_bindingManagerProperty) && (Created || Properties.ContainsKey(s_bindingsProperty)))
             {
                 // We do not want to call our parent's BindingContext property here.
                 // We have no idea if us or any of our children are using data binding,

@@ -3,6 +3,7 @@
 
 #nullable disable
 
+using System.ComponentModel;
 using System.Globalization;
 using Moq;
 
@@ -94,6 +95,26 @@ public class ControlBindingsCollectionTests
         Binding binding = new(nameof(Control.Text), 1, "dataMember");
         collection.Add(binding);
         Assert.Same(binding, Assert.Single(collection));
+    }
+
+    [WinFormsFact]
+    public void VisibleBinding_WhenAddedBeforeHiddenControlIsParented_UpdatesControl()
+    {
+        using Panel parent = new() { BindingContext = [] };
+        using Panel panel = new() { Visible = false };
+        DataSource dataSource = new() { IsVisible = true };
+
+        panel.DataBindings.Add(nameof(Control.Visible), dataSource, nameof(DataSource.IsVisible));
+        parent.Controls.Add(panel);
+
+        Assert.True(panel.Visible);
+
+        dataSource.IsVisible = false;
+        Assert.False(panel.Visible);
+
+        dataSource.IsVisible = true;
+
+        Assert.True(panel.Visible);
     }
 
     [WinFormsFact]
@@ -420,5 +441,27 @@ public class ControlBindingsCollectionTests
     private class SubControl : Control
     {
         public string text { get; set; }
+    }
+
+    private sealed class DataSource : INotifyPropertyChanged
+    {
+        private bool _isVisible;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public bool IsVisible
+        {
+            get => _isVisible;
+            set
+            {
+                if (_isVisible == value)
+                {
+                    return;
+                }
+
+                _isVisible = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsVisible)));
+            }
+        }
     }
 }

@@ -222,7 +222,7 @@ public class ToolboxItem : ISerializable
     public IComponent[]? CreateComponents(IDesignerHost? host)
     {
         OnComponentsCreating(new ToolboxComponentsCreatingEventArgs(host));
-        IComponent[]? comps = CreateComponentsCore(host, new Hashtable());
+        IComponent[]? comps = CreateComponentsCore(host, new Dictionary<string, object?>());
         if (comps is not null && comps.Length > 0)
         {
             OnComponentsCreated(new ToolboxComponentsCreatedEventArgs(comps));

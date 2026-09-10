@@ -656,7 +656,7 @@ internal class ToolStripItemDesigner : ComponentDesigner
             ISite site = Component.Site;
             if (site is not null && Component is ToolStripDropDownItem)
             {
-                defaultValues ??= new Hashtable();
+                defaultValues ??= new Dictionary<string, object?>();
 
                 defaultValues["Text"] = site.Name;
                 IComponent component = Component;

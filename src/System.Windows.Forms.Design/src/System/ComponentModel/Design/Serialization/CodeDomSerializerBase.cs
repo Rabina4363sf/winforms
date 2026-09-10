@@ -2429,7 +2429,11 @@ public abstract partial class CodeDomSerializerBase
         CodeExpression? expression = null;
         if (manager.TryGetContext(out LegacyExpressionTable? table))
         {
-            object? exp = table[value];
+            if (!table.TryGetValue(value, out object? exp))
+            {
+                return expression;
+            }
+
             if (exp == value)
             {
                 // Sentinel. Compute an actual legacy expression to store.
@@ -2507,7 +2511,7 @@ public abstract partial class CodeDomSerializerBase
         }
     }
 
-    private class LegacyExpressionTable : Hashtable
+    private class LegacyExpressionTable : Dictionary<object, object?>
     {
     }
 

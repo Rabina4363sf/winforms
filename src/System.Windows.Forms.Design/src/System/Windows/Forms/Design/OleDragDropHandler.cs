@@ -176,7 +176,7 @@ internal partial class OleDragDropHandler
 
                     // Create a dictionary of default values that the designer can
                     // use to initialize a control with.
-                    Hashtable defaultValues = [];
+                    Dictionary<string, object?> defaultValues = [];
                     if (parent is not null)
                         defaultValues["Parent"] = parent;
 

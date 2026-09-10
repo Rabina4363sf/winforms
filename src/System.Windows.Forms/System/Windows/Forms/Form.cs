@@ -3516,6 +3516,7 @@ public partial class Form : ContainerControl
     {
         if (disposing)
         {
+            DisposeTaskbarItemInfo();
             CalledOnLoad = false;
             CalledMakeVisible = false;
             CalledCreateControl = false;
@@ -4199,6 +4200,7 @@ public partial class Form : ContainerControl
         _formStateEx[s_formStateExUseMdiChildProc] = (IsMdiChild && Visible) ? 1 : 0;
         base.OnHandleCreated(e);
 
+        OnTaskbarItemInfoHandleCreated();
         UpdateLayered();
 
         // Normally, we update the form's title properties here after the handle is created.

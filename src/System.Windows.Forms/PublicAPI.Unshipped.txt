@@ -1,4 +1,17 @@
 #nullable enable
+System.Windows.Forms.Form.TaskbarItemInfo.get -> System.Windows.Forms.TaskbarItemInfo!
+System.Windows.Forms.TaskbarItemInfo
+System.Windows.Forms.TaskbarItemInfo.ProgressState.get -> System.Windows.Forms.TaskbarItemProgressState
+System.Windows.Forms.TaskbarItemInfo.ProgressState.set -> void
+System.Windows.Forms.TaskbarItemInfo.ProgressValue.get -> double
+System.Windows.Forms.TaskbarItemInfo.ProgressValue.set -> void
+System.Windows.Forms.TaskbarItemInfo.TaskbarItemInfo() -> void
+System.Windows.Forms.TaskbarItemProgressState
+System.Windows.Forms.TaskbarItemProgressState.Error = 4 -> System.Windows.Forms.TaskbarItemProgressState
+System.Windows.Forms.TaskbarItemProgressState.Indeterminate = 1 -> System.Windows.Forms.TaskbarItemProgressState
+System.Windows.Forms.TaskbarItemProgressState.NoProgress = 0 -> System.Windows.Forms.TaskbarItemProgressState
+System.Windows.Forms.TaskbarItemProgressState.Normal = 2 -> System.Windows.Forms.TaskbarItemProgressState
+System.Windows.Forms.TaskbarItemProgressState.Paused = 8 -> System.Windows.Forms.TaskbarItemProgressState
 static System.Windows.Forms.Application.SystemVisualSettings.get -> System.Windows.Forms.SystemVisualSettings!
 static System.Windows.Forms.Application.SystemVisualSettingsChanged -> System.Windows.Forms.SystemVisualSettingsChangedEventHandler?
 System.Windows.Forms.PropertyGrid.VisualStylesModeChanged -> System.EventHandler?

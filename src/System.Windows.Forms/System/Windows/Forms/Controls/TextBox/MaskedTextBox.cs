@@ -1812,6 +1812,12 @@ public partial class MaskedTextBox : TextBoxBase
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
+
+        if (!IsHandleCreated)
+        {
+            return;
+        }
+
         SetSelectionOnHandle();
 
         if (_flagState[s_isNullMask] && _maskedTextProvider.IsPassword)

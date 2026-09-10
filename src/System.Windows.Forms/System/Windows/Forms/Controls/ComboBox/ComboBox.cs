@@ -2350,6 +2350,11 @@ public partial class ComboBox : ListControl
     {
         base.OnHandleCreated(e);
 
+        if (!IsHandleCreated)
+        {
+            return;
+        }
+
         if (MaxLength > 0)
         {
             PInvokeCore.SendMessage(this, PInvoke.CB_LIMITTEXT, (WPARAM)MaxLength);

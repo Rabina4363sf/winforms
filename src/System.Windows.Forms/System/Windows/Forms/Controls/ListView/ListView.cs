@@ -4532,6 +4532,11 @@ public partial class ListView : Control
 
         base.OnHandleCreated(e);
 
+        if (!IsHandleCreated)
+        {
+            return;
+        }
+
         int version = (int)PInvokeCore.SendMessage(this, PInvoke.CCM_GETVERSION);
         if (version < 5)
         {

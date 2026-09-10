@@ -2109,6 +2109,48 @@ public partial class ControlTests
         Assert.False(control.IsHandleCreated);
     }
 
+    public static TheoryData<Type> OnHandleCreated_DerivedControl_TestData => new()
+    {
+        typeof(CheckBox),
+        typeof(CheckedListBox),
+        typeof(ComboBox),
+        typeof(global::System.Windows.Forms.Design.ComponentEditorForm.PageSelector),
+        typeof(DataGridView),
+        typeof(DateTimePicker),
+        typeof(Form),
+        typeof(HScrollBar),
+        typeof(ListBox),
+        typeof(ListView),
+        typeof(MaskedTextBox),
+        typeof(MonthCalendar),
+        typeof(NumericUpDown),
+        typeof(PictureBox),
+        typeof(ProgressBar),
+        typeof(PropertyGrid),
+        typeof(RadioButton),
+        typeof(RichTextBox),
+        typeof(TabControl),
+        typeof(TextBox),
+        typeof(ToolStrip),
+        typeof(ToolStripContentPanel),
+        typeof(TrackBar),
+        typeof(TreeView),
+        typeof(WebBrowser)
+    };
+
+    [WinFormsTheory]
+    [MemberData(nameof(OnHandleCreated_DerivedControl_TestData))]
+    public void Control_OnHandleCreated_DerivedControlWithoutHandle_DoesNotCreateHandle(Type controlType)
+    {
+        using Control control = (Control)Activator.CreateInstance(controlType)!;
+
+        Assert.False(control.IsHandleCreated);
+
+        control.TestAccessor.Dynamic.OnHandleCreated(EventArgs.Empty);
+
+        Assert.False(control.IsHandleCreated);
+    }
+
     [WinFormsTheory]
     [NewAndDefaultData<EventArgs>]
     public void Control_OnHandleCreated_Invoke_CallsHandleCreated(EventArgs eventArgs)

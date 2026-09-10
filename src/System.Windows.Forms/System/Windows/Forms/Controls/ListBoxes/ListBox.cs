@@ -1743,6 +1743,11 @@ public partial class ListBox : ListControl
     {
         base.OnHandleCreated(e);
 
+        if (!IsHandleCreated)
+        {
+            return;
+        }
+
         // Get the current locale to set the Scrollbars
         PInvokeCore.SendMessage(this, PInvoke.LB_SETLOCALE, (WPARAM)PInvokeCore.GetThreadLocale());
 

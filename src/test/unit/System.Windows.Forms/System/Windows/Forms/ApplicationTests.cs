@@ -6,6 +6,7 @@
 using System.ComponentModel;
 using System.Drawing;
 using System.Globalization;
+using System.Runtime.Serialization;
 using System.Windows.Forms.VisualStyles;
 using Microsoft.DotNet.RemoteExecutor;
 using Microsoft.Win32;
@@ -15,9 +16,33 @@ namespace System.Windows.Forms.Tests;
 public partial class ApplicationTests
 {
     [WinFormsFact]
+    public void Application_BinaryFormatterBinder_Set_GetReturnsExpected()
+    {
+        RemoteExecutor.Invoke(() =>
+        {
+            Assert.Null(Application.BinaryFormatterBinder);
+
+            SerializationBinder expectedBinder = new TestSerializationBinder();
+            Application.BinaryFormatterBinder = expectedBinder;
+            Assert.Same(expectedBinder, Application.BinaryFormatterBinder);
+
+            Application.BinaryFormatterBinder = null;
+            Assert.Null(Application.BinaryFormatterBinder);
+        }).Dispose();
+    }
+
+    [WinFormsFact]
     public void Application_CurrentCulture_Get_ReturnsExpected()
     {
         Assert.Same(Thread.CurrentThread.CurrentCulture, Application.CurrentCulture);
+    }
+
+    /// <summary>
+    ///  Provides a binder for testing the application-wide BinaryFormatter binder setting.
+    /// </summary>
+    private sealed class TestSerializationBinder : SerializationBinder
+    {
+        public override Type BindToType(string assemblyName, string typeName) => typeof(object);
     }
 
     public static IEnumerable<object[]> CurrentCulture_Set_TestData()

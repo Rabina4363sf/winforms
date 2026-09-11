@@ -292,7 +292,7 @@ public sealed class ResXDataNode : ISerializable
         {
             binaryFormatter ??= new BinaryFormatter
             {
-                Binder = new ResXSerializationBinder(typeNameConverter)
+                Binder = new ResXSerializationBinder(typeNameConverter, Application.BinaryFormatterBinder)
             };
 
             using (MemoryStream stream = new())
@@ -444,7 +444,7 @@ public sealed class ResXDataNode : ISerializable
         stream.Position = 0;
         _binaryFormatter ??= new BinaryFormatter
         {
-            Binder = new ResXSerializationBinder(typeResolver)
+            Binder = new ResXSerializationBinder(typeResolver, Application.BinaryFormatterBinder)
         };
 
         // cs/dangerous-binary-deserialization

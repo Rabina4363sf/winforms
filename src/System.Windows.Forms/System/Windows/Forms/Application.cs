@@ -4,8 +4,12 @@
 using System.ComponentModel;
 using System.Drawing;
 using System.Globalization;
+using System.Private.Windows.Ole;
 using System.Reflection;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
+using System.Windows.Forms.Nrbf;
 using System.Windows.Forms.VisualStyles;
 using Microsoft.Office;
 using Microsoft.Win32;
@@ -49,6 +53,7 @@ public sealed partial class Application
 #endif
 
     private static VisualStylesMode? s_defaultVisualStylesMode;
+    private static SerializationBinder? s_binaryFormatterBinder;
 
     private const string DarkModeKeyPath = "HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
     private const string DarkModeKey = "AppsUseLightTheme";
@@ -74,6 +79,32 @@ public sealed partial class Application
     /// </summary>
     private Application()
     {
+    }
+
+    /// <summary>
+    ///  Gets or sets the <see cref="SerializationBinder"/> used by Windows Forms when it falls back to
+    ///  <see cref="BinaryFormatter"/> serialization.
+    /// </summary>
+    /// <remarks>
+    ///  <para>
+    ///   This binder is used for BinaryFormatter operations performed by Windows Forms, including legacy
+    ///   ActiveX, designer serialization, and untyped clipboard and drag-and-drop fallback paths. Typed
+    ///   clipboard APIs that receive an explicit resolver continue to use that resolver. This property
+    ///   does not affect <see cref="BinaryFormatter"/> instances created by application code.
+    ///  </para>
+    ///  <para>
+    ///   The default value is <see langword="null"/>. Applications that enable BinaryFormatter
+    ///   serialization should set this property to restrict the types that can be deserialized.
+    ///  </para>
+    /// </remarks>
+    public static SerializationBinder? BinaryFormatterBinder
+    {
+        get => s_binaryFormatterBinder;
+        set
+        {
+            s_binaryFormatterBinder = value;
+            BinaryFormatUtilities<WinFormsNrbfSerializer>.BinaryFormatterBinder = value;
+        }
     }
 
     /// <summary>

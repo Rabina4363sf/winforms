@@ -20,18 +20,33 @@ internal class ResXSerializationBinder : SerializationBinder
 {
     private readonly ITypeResolutionService? _typeResolver;
     private readonly Func<Type?, string>? _typeNameConverter;
+    private readonly SerializationBinder? _fallbackBinder;
 
     /// <param name="typeResolver">
     ///  The custom type resolution service used to bind names to a specific <see cref="Type"/>. Only
     ///  <see cref="ITypeResolutionService.GetType(string)"/> is called by this binder.
     /// </param>
-    internal ResXSerializationBinder(ITypeResolutionService? typeResolver) => _typeResolver = typeResolver;
+    /// <param name="fallbackBinder">The binder to use when the type resolver does not resolve a type.</param>
+    internal ResXSerializationBinder(
+        ITypeResolutionService? typeResolver,
+        SerializationBinder? fallbackBinder = null)
+    {
+        _typeResolver = typeResolver;
+        _fallbackBinder = fallbackBinder;
+    }
 
     /// <param name="typeNameConverter">
     ///  The type name converter to use for binding a <see cref="Type"/> to a custom name. This is passed in through
     ///  constructors on <see cref="ResXDataNode"/> such as <see cref="ResXDataNode(string, object?, Func{Type?, string}?)"/>
     /// </param>
-    internal ResXSerializationBinder(Func<Type?, string>? typeNameConverter) => _typeNameConverter = typeNameConverter;
+    /// <param name="fallbackBinder">The binder to use when the type name converter does not provide a name.</param>
+    internal ResXSerializationBinder(
+        Func<Type?, string>? typeNameConverter,
+        SerializationBinder? fallbackBinder = null)
+    {
+        _typeNameConverter = typeNameConverter;
+        _fallbackBinder = fallbackBinder;
+    }
 
     public override Type? BindToType(
         string assemblyName,
@@ -40,7 +55,7 @@ internal class ResXSerializationBinder : SerializationBinder
         if (_typeResolver is null || !TypeName.TryParse($"{typeName}, {assemblyName}".AsSpan(), out TypeName? parsed))
         {
             // cs/deserialization/nullbindtotype
-            return null; // CodeQL [SM04225] : This class is meant to redirect to .NET Framework type names. If this cannot be done, the default binder should be used.
+            return _fallbackBinder?.BindToType(assemblyName, typeName); // CodeQL [SM04225] : This class is meant to redirect to .NET Framework type names. If this cannot be done, the default binder should be used.
         }
 
         Type? type = _typeResolver.GetType(parsed.AssemblyQualifiedName);
@@ -67,7 +82,7 @@ internal class ResXSerializationBinder : SerializationBinder
 
         // Hand back what we found or null to let the default loader take over.
         // cs/deserialization/nullbindtotype
-        return type; // CodeQL[SM04225] : This binder isn't intended as a security facility; it's allowable for us to return null.
+        return type ?? _fallbackBinder?.BindToType(assemblyName, typeName); // CodeQL[SM04225] : This binder isn't intended as a security facility; it's allowable for us to return null.
     }
 
     public override void BindToName(Type serializedType, out string? assemblyName, out string? typeName)
@@ -93,6 +108,12 @@ internal class ResXSerializationBinder : SerializationBinder
 
                 return;
             }
+        }
+
+        if (_fallbackBinder is not null)
+        {
+            _fallbackBinder.BindToName(serializedType, out assemblyName, out typeName);
+            return;
         }
 
         base.BindToName(serializedType, out assemblyName, out typeName);

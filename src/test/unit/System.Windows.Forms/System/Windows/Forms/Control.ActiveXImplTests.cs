@@ -72,6 +72,39 @@ public unsafe class Control_ActiveXImplTests
         Assert.Equal("sup", control.Table!["Whas"]);
     }
 
+    [WinFormsFact]
+    public void ActiveXImpl_SaveLoad_BinaryFormatterProperty_UsesApplicationBinder()
+    {
+        using BinaryFormatterScope formatterScope = new(enable: true);
+        using MyControl control = new();
+        SerializationBinder? oldBinder = Application.BinaryFormatterBinder;
+        TrackingSerializationBinder binder = new();
+        Application.BinaryFormatterBinder = binder;
+
+        try
+        {
+            control.SerializableValue = new SerializableStruct { Value = "HelloThere" };
+            IPersistStreamInit.Interface persistStream = control;
+
+            using MemoryStream memoryStream = new();
+            using var istream = memoryStream.ToIStream();
+            HRESULT hr = persistStream.Save(istream.Value, fClearDirty: BOOL.FALSE);
+            Assert.True(hr.Succeeded);
+
+            control.SerializableValue = default;
+            istream.Value->Seek(0, SeekOrigin.Begin);
+            hr = persistStream.Load(istream.Value);
+
+            Assert.True(hr.Succeeded);
+            Assert.Equal("HelloThere", control.SerializableValue.Value);
+            Assert.True(binder.BindToTypeCallCount > 0);
+        }
+        finally
+        {
+            Application.BinaryFormatterBinder = oldBinder;
+        }
+    }
+
     private class MyControl : Control
     {
         public SerializableStruct SerializableValue { get; set; }
@@ -80,6 +113,20 @@ public unsafe class Control_ActiveXImplTests
     private class BinaryFormatterPropertiesControl : Control
     {
         public Hashtable? Table { get; set; }
+    }
+
+    /// <summary>
+    ///  Tracks calls made to the binder while a BinaryFormatter payload is read.
+    /// </summary>
+    private sealed class TrackingSerializationBinder : SerializationBinder
+    {
+        public int BindToTypeCallCount { get; private set; }
+
+        public override Type? BindToType(string assemblyName, string typeName)
+        {
+            BindToTypeCallCount++;
+            return Type.GetType($"{typeName}, {assemblyName}");
+        }
     }
 
     [Serializable]

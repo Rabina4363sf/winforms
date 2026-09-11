@@ -21,6 +21,8 @@ internal static partial class BinaryFormatUtilities<TNrbfSerializer>
     private static readonly INrbfSerializer s_nrbfSerializer = new TNrbfSerializer();
 #endif
 
+    internal static SerializationBinder? BinaryFormatterBinder { get; set; }
+
     /// <summary>
     ///  Writes an object to the provided memory stream.
     /// </summary>
@@ -72,7 +74,10 @@ internal static partial class BinaryFormatUtilities<TNrbfSerializer>
 
         stream.Position = position;
 #pragma warning disable SYSLIB0011 // Type or member is obsolete
-        new BinaryFormatter().Serialize(stream, data);
+        new BinaryFormatter
+        {
+            Binder = BinaryFormatterBinder
+        }.Serialize(stream, data);
 #pragma warning restore SYSLIB0011
     }
 
@@ -225,9 +230,13 @@ internal static partial class BinaryFormatUtilities<TNrbfSerializer>
 #pragma warning disable CA2302 // Ensure BinaryFormatter.Binder is set before calling BinaryFormatter.Deserialize
         try
         {
+            SerializationBinder binaryFormatterBinder = request.TypedRequest
+                ? binder
+                : BinaryFormatterBinder ?? binder;
+
             value = new BinaryFormatter()
             {
-                Binder = binder,
+                Binder = binaryFormatterBinder,
                 // Don't consider assembly versions when deserializing.
                 AssemblyFormat = FormatterAssemblyStyle.Simple
             }.Deserialize(stream);

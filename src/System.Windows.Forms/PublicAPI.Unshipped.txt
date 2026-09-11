@@ -41,6 +41,35 @@ System.Windows.Forms.LayoutSuspendTraversal
 System.Windows.Forms.LayoutSuspendTraversal.None = 0 -> System.Windows.Forms.LayoutSuspendTraversal
 System.Windows.Forms.LayoutSuspendTraversal.TargetAndDescendants = 2 -> System.Windows.Forms.LayoutSuspendTraversal
 System.Windows.Forms.LayoutSuspendTraversal.TargetOnly = 1 -> System.Windows.Forms.LayoutSuspendTraversal
+System.Windows.Forms.StackPanel
+System.Windows.Forms.StackPanel.BeginInit() -> void
+System.Windows.Forms.StackPanel.EndInit() -> void
+System.Windows.Forms.StackPanel.PageCount.get -> int
+System.Windows.Forms.StackPanel.Pages.get -> System.Windows.Forms.StackPanel.StackPageCollection!
+System.Windows.Forms.StackPanel.SelectedIndex.get -> int
+System.Windows.Forms.StackPanel.SelectedIndex.set -> void
+System.Windows.Forms.StackPanel.SelectedIndexChanged -> System.EventHandler?
+System.Windows.Forms.StackPanel.SelectedPage.get -> System.Windows.Forms.StackPage?
+System.Windows.Forms.StackPanel.SelectedPage.set -> void
+virtual System.Windows.Forms.StackPanel.OnSelectedIndexChanged(System.EventArgs! e) -> void
+System.Windows.Forms.StackPanel.StackPanel() -> void
+System.Windows.Forms.StackPanel.StackPageCollection
+System.Windows.Forms.StackPanel.StackPageCollection.Add(System.Windows.Forms.StackPage! page) -> void
+System.Windows.Forms.StackPanel.StackPageCollection.AddRange(System.Windows.Forms.StackPage![]! pages) -> void
+System.Windows.Forms.StackPanel.StackPageCollection.Clear() -> void
+System.Windows.Forms.StackPanel.StackPageCollection.Contains(System.Windows.Forms.StackPage! page) -> bool
+System.Windows.Forms.StackPanel.StackPageCollection.Count.get -> int
+System.Windows.Forms.StackPanel.StackPageCollection.IndexOf(System.Windows.Forms.StackPage! page) -> int
+System.Windows.Forms.StackPanel.StackPageCollection.Insert(int index, System.Windows.Forms.StackPage! page) -> void
+System.Windows.Forms.StackPanel.StackPageCollection.Remove(System.Windows.Forms.StackPage! page) -> void
+System.Windows.Forms.StackPanel.StackPageCollection.RemoveAt(int index) -> void
+System.Windows.Forms.StackPanel.StackPageCollection.this[int index].get -> System.Windows.Forms.StackPage!
+System.Windows.Forms.StackPanel.StackPageCollection.this[int index].set -> void
+System.Windows.Forms.StackPage
+override System.Windows.Forms.StackPage.Text.get -> string!
+override System.Windows.Forms.StackPage.Text.set -> void
+System.Windows.Forms.StackPage.StackPage() -> void
+System.Windows.Forms.StackPage.StackPage(string? text) -> void
 static System.Windows.Forms.Application.DefaultFormRevealMode.get -> System.Windows.Forms.FormRevealMode
 static System.Windows.Forms.Application.IsFormRevealDeferred.get -> bool
 static System.Windows.Forms.Application.SetDefaultFormRevealMode(System.Windows.Forms.FormRevealMode mode) -> void

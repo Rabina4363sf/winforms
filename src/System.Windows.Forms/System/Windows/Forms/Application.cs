@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Globalization;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Windows.Forms.VisualStyles;
 using Microsoft.Office;
@@ -82,6 +83,16 @@ public sealed partial class Application
     ///  Windows Forms control should not attempt to quit the application.
     /// </summary>
     public static bool AllowQuit => ThreadContext.GetAllowQuit();
+
+    /// <summary>
+    ///  Gets or sets the binder used by Windows Forms when deserializing legacy binary-formatted data.
+    /// </summary>
+    /// <remarks>
+    ///  Setting this property does not enable <see cref="System.Runtime.Serialization.Formatters.Binary.BinaryFormatter"/>.
+    ///  The existing application switches must still enable legacy binary serialization.
+    ///  Applications should use a binder that restricts deserialization to trusted types.
+    /// </remarks>
+    public static SerializationBinder? BinaryFormatterBinder { get; set; }
 
     /// <summary>
     ///  Typically, you shouldn't need to use this directly - use RenderWithVisualStyles instead.

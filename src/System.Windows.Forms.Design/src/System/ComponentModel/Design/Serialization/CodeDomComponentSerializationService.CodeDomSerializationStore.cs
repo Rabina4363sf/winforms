@@ -5,6 +5,7 @@ using System.Collections;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Windows.Forms;
 
 namespace System.ComponentModel.Design.Serialization;
 
@@ -145,7 +146,8 @@ public sealed partial class CodeDomComponentSerializationService
 
             using (manager.CreateSession())
             {
-                // Walk through our objects and name them so the serialization manager knows what names we gave them.
+                // Walk through our objects and name them so the serializa
+                // tion manager knows what names we gave them.
                 foreach (ObjectData data in _objects.Values)
                 {
                     ((IDesignerSerializationManager)manager).SetName(data._value, data._name);
@@ -164,7 +166,7 @@ public sealed partial class CodeDomComponentSerializationService
                     _resourceStream = new MemoryStream();
 
 #pragma warning disable SYSLIB0011 // Type or member is obsolete
-                    new BinaryFormatter().Serialize(_resourceStream, _resources.Data);
+                    new BinaryFormatter { Binder = Application.BinaryFormatterBinder }.Serialize(_resourceStream, _resources.Data);
 #pragma warning restore SYSLIB0011
                 }
             }
@@ -230,7 +232,7 @@ public sealed partial class CodeDomComponentSerializationService
 #pragma warning disable SYSLIB0011 // Type or member is obsolete
 #pragma warning disable CA2300 // Do not use insecure deserializer BinaryFormatter
 #pragma warning disable CA2301 // Ensure BinaryFormatter.Binder is set before calling BinaryFormatter.Deserialize
-                Hashtable? resources = new BinaryFormatter().Deserialize(_resourceStream) as Hashtable; // CodeQL[SM03722, SM04191] : The operation is essential for the design experience when users are running their own designers they have created. This cannot be achieved without BinaryFormatter
+                Hashtable? resources = new BinaryFormatter { Binder = Application.BinaryFormatterBinder }.Deserialize(_resourceStream) as Hashtable; // CodeQL[SM03722, SM04191] : The operation is essential for the design experience when users are running their own designers they have created. This cannot be achieved without BinaryFormatter
 #pragma warning restore CA2301
 #pragma warning restore CA2300
 #pragma warning restore SYSLIB0011

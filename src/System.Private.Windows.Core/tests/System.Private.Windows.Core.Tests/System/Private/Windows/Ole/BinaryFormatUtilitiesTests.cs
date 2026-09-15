@@ -471,7 +471,7 @@ public sealed partial class BinaryFormatUtilitiesTests : BinaryFormatUtilitesTes
 
     [Theory]
     [EnumData<DataType>]
-    public void TryReadObjectFromStream_Class_DerivedAsBase(DataType dataType)
+    public void TryReadObjectFromStream_Class_DerivedAsBaseWithResolverFails(DataType dataType)
     {
         using BinaryFormatterScope scope = new(enable: dataType == DataType.BinaryFormat);
         using BinaryFormatterInClipboardDragDropScope clipboardScope = new(enable: dataType == DataType.BinaryFormat);
@@ -498,8 +498,8 @@ public sealed partial class BinaryFormatUtilitiesTests : BinaryFormatUtilitesTes
                 : throw new NotSupportedException()
         };
 
-        BinaryFormatUtilities.TryReadObjectFromStream(stream, ref request, out BaseClass? result).Should().BeTrue();
-        result.Should().NotBeNull();
+        BinaryFormatUtilities.TryReadObjectFromStream(stream, ref request, out BaseClass? result).Should().BeFalse();
+        result.Should().BeNull();
     }
 
     [Serializable]

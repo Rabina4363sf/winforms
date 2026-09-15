@@ -118,8 +118,8 @@ internal sealed class TypeBinder<TNrbfSerializer> : SerializationBinder, ITypeRe
             }
 
             // If we fall back here to the TNrbfSerializer all types would match for the root. This has the side
-            // effect of asking for `int?` and matching `int` data. We need to do `IsAssignableTo` for resolved
-            // types so we can allow resolvers to bind to derived classes- `int` is assignable to `int?`.
+            // effect of asking for `int?` and matching `int` data. The caller may explicitly resolve the serialized
+            // type to a compatible value type such as `int?`, but reference types must still match exactly.
             //
             // Asking for `List<int?>` will not match `List<int>` data, even though the CoreNrbfSerializer supports
             // `List<int>`. `List<int>` is not assignable to `List<int?>`.

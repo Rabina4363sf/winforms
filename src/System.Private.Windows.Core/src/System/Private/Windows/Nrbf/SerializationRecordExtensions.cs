@@ -590,7 +590,7 @@ internal static class SerializationRecordExtensions
         }
 
         Type? boundType = resolver.BindToType(typeName);
-        if (!boundType.IsAssignableTo(typeof(T)))
+        if (boundType != typeof(T) && typeof(T) != typeof(object))
         {
             // Not the type the caller asked for.
             return (isJsonData: true, isValidType: false);

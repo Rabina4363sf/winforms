@@ -137,7 +137,8 @@ internal static partial class BinaryFormatUtilities<TNrbfSerializer>
             {
                 if (request.TypedRequest
                     // If we can't match the root exactly, then we fall back to the binder.
-                    && !(type == typeof(T) || binder.BindToType(record.TypeName).IsAssignableTo(typeof(T))))
+                    && type != typeof(T)
+                    && binder.BindToType(record.TypeName) != typeof(T))
                 {
                     return false;
                 }
@@ -178,7 +179,7 @@ internal static partial class BinaryFormatUtilities<TNrbfSerializer>
             // JSON type info is nested, so this has to come after the JSON attempt.
             if (request.TypedRequest && !typeof(T).Matches(record.TypeName, TypeNameComparison.AllButAssemblyVersion))
             {
-                if (!binder.BindToType(record.TypeName).IsAssignableTo(typeof(T)))
+                if (binder.BindToType(record.TypeName) != typeof(T))
                 {
                     // Typed request where the root type is not what was requested.
                     // Untyped requests are allowed to deserialize any type.
@@ -245,7 +246,10 @@ internal static partial class BinaryFormatUtilities<TNrbfSerializer>
 #pragma warning restore CA2302
 #pragma warning restore SYSLIB0050, SYSLIB0011
 
-        if (value is T t)
+        if (value is T t
+            && (!request.TypedRequest
+                || typeof(T).IsValueType
+                || value.GetType() == typeof(T)))
         {
             @object = t;
             return true;

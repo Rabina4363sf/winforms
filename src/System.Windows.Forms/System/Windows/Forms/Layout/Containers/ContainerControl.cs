@@ -871,7 +871,7 @@ public class ContainerControl : ScrollableControl, IContainerControl
             }
             finally
             {
-                ResumeAllLayout(this, performLayout: false);
+                ResumeAllLayout(this, performLayout: true);
             }
         }
 
@@ -995,7 +995,9 @@ public class ContainerControl : ScrollableControl, IContainerControl
 
             if (suspended)
             {
-                ResumeAllLayout(this, performLayout: false);
+                // The scaling pass changes container bounds before anchored children are laid out.
+                // Perform the final layout without reinitializing their anchor distances.
+                ResumeAllLayout(this, performLayout: true);
             }
         }
     }

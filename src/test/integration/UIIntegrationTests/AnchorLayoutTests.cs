@@ -261,6 +261,52 @@ public class AnchorLayoutTests : ControlTestBase
     }
 
     [WinFormsFact]
+    public void ContainerControl_PerformAutoScale_AnchoredChildFillsScaledUserControl()
+    {
+        // Regression test for https://github.com/dotnet/winforms/issues/3007.
+        using AnchorLayoutV2Scope scope = new(enable: false);
+        using Form form = new()
+        {
+            AutoScaleMode = AutoScaleMode.Font,
+            ClientSize = new Size(400, 300)
+        };
+
+        form.SuspendLayout();
+
+        SizeF currentAutoScaleDimensions = form.CurrentAutoScaleDimensions;
+        form.AutoScaleDimensions = new(
+            currentAutoScaleDimensions.Width / 2,
+            currentAutoScaleDimensions.Height / 2);
+
+        using UserControl userControl = new()
+        {
+            AutoScaleMode = AutoScaleMode.Font,
+            AutoScaleDimensions = currentAutoScaleDimensions,
+            Size = new Size(250, 200)
+        };
+        using ListView listView = new()
+        {
+            Anchor = AnchorAllDirection,
+            Margin = Padding.Empty,
+            Size = new Size(250, 200)
+        };
+
+        userControl.Controls.Add(listView);
+        form.Controls.Add(userControl);
+
+        // Establish the UserControl's scaling baseline before the Form scales it.
+        // This leaves the anchored child out of the next scaling pass, matching
+        // the nested-container scenario from the issue.
+        userControl.PerformAutoScale();
+        form.PerformAutoScale();
+        form.ResumeLayout(performLayout: true);
+
+        Assert.NotEqual(new Size(250, 200), userControl.ClientSize);
+        Assert.Equal(userControl.ClientSize, listView.Size);
+        Assert.Equal(Point.Empty, listView.Location);
+    }
+
+    [WinFormsFact]
     public void SetBoundsOnAnchoredControl_BoundsChanged()
     {
         using AnchorLayoutV2Scope scope = new(enable: true);

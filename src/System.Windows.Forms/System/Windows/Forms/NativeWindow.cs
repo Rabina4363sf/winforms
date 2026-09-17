@@ -4,6 +4,7 @@
 using System.ComponentModel;
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
+using Windows.Win32.UI.Controls;
 
 namespace System.Windows.Forms;
 
@@ -42,16 +43,14 @@ public unsafe partial class NativeWindow : MarshalByRefObject, IWin32Window, IHa
 
     private readonly Lock _lock = new();
 
-    // Our window procedure delegate
-    private WNDPROC? _windowProc;
-
-    // The native handle for our delegate
-    private void* _windowProcHandle;
-
     // The native handle for Windows' default window procedure
     private static IntPtr s_defaultWindowProc;
 
-    private void* _priorWindowProcHandle;
+    private static readonly SUBCLASSPROC s_subclassProc = SubclassCallback;
+    private static long s_nextSubclassId;
+
+    private GCHandle _subclassHandle;
+    private nuint _subclassId;
     private bool _suppressedGC;
     private bool _ownHandle;
     private NativeWindow? _nextWindow;
@@ -300,19 +299,22 @@ public unsafe partial class NativeWindow : MarshalByRefObject, IWin32Window, IHa
 
             HWND = hwnd;
 
-            _priorWindowProcHandle = (void*)PInvokeCore.GetWindowLong(this, WINDOW_LONG_PTR_INDEX.GWL_WNDPROC);
-            Debug.Assert(_priorWindowProcHandle is not null);
+            _subclassId = (nuint)Interlocked.Increment(ref s_nextSubclassId);
+            _subclassHandle = GCHandle.Alloc(this, GCHandleType.Weak);
 
-            _windowProc = new WNDPROC(Callback);
+            if (!PInvokeCore.SetWindowSubclass(
+                hwnd,
+                s_subclassProc,
+                _subclassId,
+                (nuint)GCHandle.ToIntPtr(_subclassHandle)))
+            {
+                _subclassHandle.Free();
+                _subclassId = 0;
+                HWND = HWND.Null;
+                throw new Win32Exception();
+            }
 
             AddWindowToTable(hwnd, this);
-
-            // Set the NativeWindow window procedure delegate and get back the native pointer for it.
-            PInvokeCore.SetWindowLong(this, WINDOW_LONG_PTR_INDEX.GWL_WNDPROC, _windowProc);
-            _windowProcHandle = (void*)PInvokeCore.GetWindowLong(this, WINDOW_LONG_PTR_INDEX.GWL_WNDPROC);
-
-            // This shouldn't be possible.
-            Debug.Assert(_priorWindowProcHandle != _windowProcHandle, "Uh oh! Subclassed ourselves!!!");
 
             if (assignUniqueID
                 && ((WINDOW_STYLE)(uint)PInvokeCore.GetWindowLong(this, WINDOW_LONG_PTR_INDEX.GWL_STYLE)).HasFlag(WINDOW_STYLE.WS_CHILD)
@@ -329,6 +331,28 @@ public unsafe partial class NativeWindow : MarshalByRefObject, IWin32Window, IHa
 
             OnHandleChange();
         }
+    }
+
+    private static LRESULT SubclassCallback(
+        HWND hWnd,
+        uint msg,
+        WPARAM wParam,
+        LPARAM lParam,
+        nuint subclassId,
+        nuint refData)
+    {
+        if (refData != 0)
+        {
+            GCHandle subclassHandle = GCHandle.FromIntPtr((nint)refData);
+            if (subclassHandle.IsAllocated
+                && subclassHandle.Target is NativeWindow window
+                && window._subclassId == subclassId)
+            {
+                return window.Callback(hWnd, msg, wParam, lParam);
+            }
+        }
+
+        return PInvokeCore.DefSubclassProc(hWnd, msg, wParam, lParam);
     }
 
     /// <summary>
@@ -496,29 +520,11 @@ public unsafe partial class NativeWindow : MarshalByRefObject, IWin32Window, IHa
     /// </summary>
     public void DefWndProc(ref Message m)
     {
-        if (PreviousWindow is null)
-        {
-            if (_priorWindowProcHandle == null)
-            {
-                Debug.Fail($"Can't find a default window procedure for message {m} on class {GetType().Name}");
-
-                // At this point, there isn't much we can do. There's a small chance the following
-                // line will allow the rest of the program to run, but don't get your hopes up.
-                m.ResultInternal = PInvokeCore.DefWindowProc(m.HWND, (uint)m.Msg, m.WParamInternal, m.LParamInternal);
-                return;
-            }
-
-            m.ResultInternal = PInvokeCore.CallWindowProc(
-                _priorWindowProcHandle,
-                m.HWND,
-                (uint)m.Msg,
-                m.WParamInternal,
-                m.LParamInternal);
-        }
-        else
-        {
-            m.ResultInternal = PreviousWindow.Callback(m.HWND, m.MsgInternal, m.WParamInternal, m.LParamInternal);
-        }
+        m.ResultInternal = PInvokeCore.DefSubclassProc(
+            m.HWND,
+            (uint)m.Msg,
+            m.WParamInternal,
+            m.LParamInternal);
     }
 
     /// <summary>
@@ -532,7 +538,8 @@ public unsafe partial class NativeWindow : MarshalByRefObject, IWin32Window, IHa
             {
                 if (!PInvoke.DestroyWindow(HWND))
                 {
-                    UnSubclass();
+                    RemoveSubclass();
+                    FreeSubclassHandle();
 
                     // Now post a close and let it do whatever it needs to do on its own.
                     PInvokeCore.PostMessage(this, PInvokeCore.WM_CLOSE);
@@ -675,10 +682,11 @@ public unsafe partial class NativeWindow : MarshalByRefObject, IWin32Window, IHa
 
             if (handleValid)
             {
-                UnSubclass();
+                RemoveSubclass();
             }
 
             RemoveWindowFromDictionary(HWND, this);
+            FreeSubclassHandle();
 
             if (_ownHandle)
             {
@@ -716,7 +724,6 @@ public unsafe partial class NativeWindow : MarshalByRefObject, IWin32Window, IHa
             if (window._nextWindow is not null)
             {
                 // Connect the next window to the prior window
-                window._nextWindow._priorWindowProcHandle = window._priorWindowProcHandle;
                 window._nextWindow.PreviousWindow = window.PreviousWindow;
             }
 
@@ -825,16 +832,27 @@ public unsafe partial class NativeWindow : MarshalByRefObject, IWin32Window, IHa
     }
 
     /// <summary>
-    ///  Unsubclassing is a tricky business. We need to account for some border cases:
-    ///
-    ///   1) User has done multiple subclasses but has un-subclassed out of order.
-    ///   2) User has done multiple subclasses but now our defWindowProc points to
-    ///       a NativeWindow that has GC'd.
-    ///   3) User releasing this handle but this NativeWindow is not the current
-    ///       window proc.
+    ///  Removes this window's native subclass.
     /// </summary>
-    private unsafe void UnSubclass()
+    private void RemoveSubclass()
     {
+        if (_subclassId != 0)
+        {
+            PInvokeCore.RemoveWindowSubclass(HWND, s_subclassProc, _subclassId);
+        }
+    }
+
+    private void FreeSubclassHandle()
+    {
+        if (_subclassHandle.IsAllocated)
+        {
+            _subclassHandle.Free();
+        }
+
+        _subclassId = 0;
+    }
+
+    /*
         bool finalizing = !_weakThisPtr.TryGetTarget(out _);
 
         // Don't touch if the current window proc is not ours.
@@ -847,7 +865,7 @@ public unsafe partial class NativeWindow : MarshalByRefObject, IWin32Window, IHa
             {
                 // This is the first NativeWindow registered for this HWND, just put back the prior handle we stashed away.
                 PInvokeCore.SetWindowLong(this, WINDOW_LONG_PTR_INDEX.GWL_WNDPROC, (nint)_priorWindowProcHandle);
-            }
+            /*
             else
             {
                 if (finalizing)

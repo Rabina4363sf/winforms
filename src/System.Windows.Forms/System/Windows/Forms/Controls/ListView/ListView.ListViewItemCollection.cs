@@ -220,6 +220,19 @@ public partial class ListView
             InnerList.AddRange(items);
         }
 
+        /// <summary>
+        ///  Adds the items in the specified collection to the ListView.
+        /// </summary>
+        /// <param name="items">The collection of items to add.</param>
+        public void AddRange(List<ListViewItem> items)
+        {
+            ArgumentNullException.ThrowIfNull(items);
+
+            var itemArray = new ListViewItem[items.Count];
+            items.CopyTo(itemArray, 0);
+            InnerList.AddRange(itemArray);
+        }
+
         public void AddRange(ListViewItemCollection items)
         {
             ArgumentNullException.ThrowIfNull(items);

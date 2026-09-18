@@ -7,6 +7,30 @@ namespace System.Windows.Forms.Tests;
 
 public class ListView_ListViewItemCollectionTests
 {
+    [WinFormsFact]
+    public void ListViewItemCollection_AddRange_InvokeIList_Success()
+    {
+        using ListView listView = new();
+        ListView.ListViewItemCollection collection = listView.Items;
+        List<ListViewItem> items =
+        [
+            new("item1"),
+            new("item2")
+        ];
+
+        collection.AddRange(items);
+
+        Assert.Equal(items, collection.Cast<ListViewItem>());
+    }
+
+    [WinFormsFact]
+    public void ListViewItemCollection_AddRange_InvokeIListNull_ThrowsArgumentNullException()
+    {
+        using ListView listView = new();
+
+        Assert.Throws<ArgumentNullException>("items", () => listView.Items.AddRange((List<ListViewItem>)null));
+    }
+
     [WinFormsTheory]
     [InlineData("name2")]
     [InlineData("NAME2")]

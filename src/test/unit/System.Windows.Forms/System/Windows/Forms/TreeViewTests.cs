@@ -1701,6 +1701,40 @@ public class TreeViewTests
         Assert.Equal(expectedSetVersionCallCount, control.SetVersionCallCount);
     }
 
+    [WinFormsFact]
+    public void TreeView_DoubleClickOnCheckBox_BeforeCheckCancellationIsHonored()
+    {
+        using SubTreeView control = new()
+        {
+            CheckBoxes = true,
+            Size = new Size(200, 100)
+        };
+        TreeNode node = control.Nodes.Add("Node");
+        control.CreateControl();
+
+        Point stateIconPoint = Point.Empty;
+        for (int y = node.Bounds.Top; y < node.Bounds.Bottom && stateIconPoint == Point.Empty; y++)
+        {
+            for (int x = 0; x < node.Bounds.Right; x++)
+            {
+                if (control.HitTest(x, y).Location == TreeViewHitTestLocations.StateImage)
+                {
+                    stateIconPoint = new Point(x, y);
+                    break;
+                }
+            }
+        }
+
+        Assert.NotEqual(Point.Empty, stateIconPoint);
+        control.BeforeCheck += (_, e) => e.Cancel = true;
+
+        IntPtr lParam = PARAM.FromLowHigh(stateIconPoint.X, stateIconPoint.Y);
+        control.SendWndProc(Message.Create(control.Handle, (int)PInvokeCore.WM_LBUTTONDOWN, IntPtr.Zero, lParam));
+        control.SendWndProc(Message.Create(control.Handle, (int)PInvokeCore.WM_LBUTTONDBLCLK, IntPtr.Zero, lParam));
+
+        Assert.False(node.Checked);
+    }
+
     private class CustomGetVersionTreeView : TreeView
     {
         public IntPtr GetVersionResult { get; set; }
@@ -7571,6 +7605,8 @@ public class TreeViewTests
 
     private class SubTreeView : TreeView
     {
+        public void SendWndProc(Message message) => base.WndProc(ref message);
+
         public new bool CanEnableIme => base.CanEnableIme;
 
         public new bool CanRaiseEvents => base.CanRaiseEvents;

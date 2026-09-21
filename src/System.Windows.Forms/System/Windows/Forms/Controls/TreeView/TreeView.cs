@@ -3247,7 +3247,23 @@ public partial class TreeView : Control
                 WmNotify(ref m);
                 break;
             case PInvokeCore.WM_LBUTTONDBLCLK:
-                WmMouseDown(ref m, MouseButtons.Left, 2);
+                TVHITTESTINFO dblClickHitTest = new()
+                {
+                    pt = PARAM.ToPoint(m.LParamInternal)
+                };
+
+                // The native TreeView toggles a checkbox for the second click in a
+                // double-click without giving BeforeCheck a chance to cancel it.
+                if ((PInvokeCore.SendMessage(this, PInvoke.TVM_HITTEST, 0, ref dblClickHitTest) != 0)
+                    && (dblClickHitTest.flags & TVHITTESTINFO_FLAGS.TVHT_ONITEMSTATEICON) != 0)
+                {
+                    OnMouseDown(new MouseEventArgs(MouseButtons.Left, 2, PARAM.ToPoint(m.LParamInternal)));
+                    m.ResultInternal = (LRESULT)0;
+                }
+                else
+                {
+                    WmMouseDown(ref m, MouseButtons.Left, 2);
+                }
 
                 // Just maintain state and fire double click in final mouseUp.
                 _treeViewState[TREEVIEWSTATE_doubleclickFired] = true;

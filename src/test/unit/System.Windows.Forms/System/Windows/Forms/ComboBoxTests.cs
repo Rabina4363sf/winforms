@@ -3928,6 +3928,52 @@ public class ComboBoxTests
         Assert.Equal(eventsCountExpected, comboBox.EventsCount);
     }
 
+    [WinFormsFact]
+    public void ComboBox_DropDownClosed_WithUnreportedSelectionChange_RestoresSelectedIndexWithoutFiringEvent()
+    {
+        using SubComboBox comboBox = new();
+        comboBox.Items.Add("John Doe");
+        comboBox.Items.Add("John Doe");
+        comboBox.Items.Add("John Doe");
+        comboBox.CreateControl();
+        comboBox.SelectedIndex = 1;
+
+        int eventCount = 0;
+        comboBox.SelectedIndexChanged += (sender, e) => eventCount++;
+        comboBox.SimulateCommandNotification((int)PInvoke.CBN_DROPDOWN);
+
+        // Simulate the native ComboBox selecting the first matching item without CBN_SELCHANGE.
+        PInvokeCore.SendMessage(comboBox, PInvoke.CB_SETCURSEL, (WPARAM)0);
+        comboBox.SimulateCommandNotification((int)PInvoke.CBN_CLOSEUP);
+        Application.DoEvents();
+
+        Assert.Equal(1, comboBox.SelectedIndex);
+        Assert.Equal(0, eventCount);
+    }
+
+    [WinFormsFact]
+    public void ComboBox_DropDownClosed_WithReportedSelectionChange_FiresSelectedIndexChangedOnce()
+    {
+        using SubComboBox comboBox = new();
+        comboBox.Items.Add("John Doe");
+        comboBox.Items.Add("John Doe");
+        comboBox.Items.Add("John Doe");
+        comboBox.CreateControl();
+        comboBox.SelectedIndex = 1;
+
+        int eventCount = 0;
+        comboBox.SelectedIndexChanged += (sender, e) => eventCount++;
+        comboBox.SimulateCommandNotification((int)PInvoke.CBN_DROPDOWN);
+
+        PInvokeCore.SendMessage(comboBox, PInvoke.CB_SETCURSEL, (WPARAM)2);
+        comboBox.SimulateCommandNotification((int)PInvoke.CBN_CLOSEUP);
+        comboBox.SimulateCommandNotification((int)PInvoke.CBN_SELCHANGE);
+        Application.DoEvents();
+
+        Assert.Equal(2, comboBox.SelectedIndex);
+        Assert.Equal(1, eventCount);
+    }
+
     [WinFormsTheory]
     [InlineData("item0", 0, 0, false)]
     [InlineData("item1", 0, 1, false)]
@@ -4474,6 +4520,17 @@ public class ComboBoxTests
         public new void OnSelectedValueChanged(EventArgs e) => base.OnSelectedValueChanged(e);
 
         public new void OnSelectionChangeCommitted(EventArgs e) => base.OnSelectionChangeCommitted(e);
+
+        public void SimulateCommandNotification(int notificationCode)
+        {
+            Message message = new()
+            {
+                Msg = (int)MessageId.WM_REFLECT_COMMAND,
+                WParam = (nint)(notificationCode << 16)
+            };
+
+            WndProc(ref message);
+        }
 
         public new bool ProcessCmdKey(ref Message msg, Keys keyData) => base.ProcessCmdKey(ref msg, keyData);
 

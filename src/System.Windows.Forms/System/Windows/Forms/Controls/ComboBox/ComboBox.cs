@@ -91,6 +91,8 @@ public partial class ComboBox : ListControl
     // selects the item in the edit thus changing the windowText. Hence we should Fire the TextChanged event in
     // such a scenario. The string below is used for checking the window Text before and after the dropdown.
     private string _currentText = string.Empty;
+    private int _selectedIndexOnDropDown;
+    private bool _selectedIndexChangePending;
     private string? _lastTextChangedValue;
     private bool _dropDown;
     private readonly AutoCompleteDropDownFinder _finder = new();
@@ -2677,6 +2679,13 @@ public partial class ComboBox : ListControl
     /// </summary>
     protected override void OnSelectedIndexChanged(EventArgs e)
     {
+        _selectedIndexChangePending = false;
+
+        if (_dropDown)
+        {
+            _selectedIndexOnDropDown = SelectedIndex;
+        }
+
         base.OnSelectedIndexChanged(e);
         ((EventHandler?)Events[s_selectedIndexChangedEvent])?.Invoke(this, e);
 
@@ -3658,6 +3667,9 @@ public partial class ComboBox : ListControl
                 break;
             case PInvoke.CBN_CLOSEUP:
 
+                bool selectedIndexChangedWhileDroppedDown = _dropDown
+                    && SelectedIndex != _selectedIndexOnDropDown;
+
                 OnDropDownClosed(EventArgs.Empty);
                 if (FormattingEnabled && Text != _currentText && _dropDown)
                 {
@@ -3665,9 +3677,17 @@ public partial class ComboBox : ListControl
                 }
 
                 _dropDown = false;
+
+                if (selectedIndexChangedWhileDroppedDown)
+                {
+                    _selectedIndexChangePending = true;
+                    BeginInvoke(RestoreSelectedIndexAfterDropDown);
+                }
+
                 break;
             case PInvoke.CBN_DROPDOWN:
                 _currentText = Text;
+                _selectedIndexOnDropDown = SelectedIndex;
                 _dropDown = true;
                 OnDropDown(EventArgs.Empty);
                 UpdateDropDownHeight();
@@ -3683,6 +3703,22 @@ public partial class ComboBox : ListControl
             case PInvoke.CBN_SELENDOK:
                 OnSelectionChangeCommittedInternal(EventArgs.Empty);
                 break;
+        }
+    }
+
+    private void RestoreSelectedIndexAfterDropDown()
+    {
+        if (!_selectedIndexChangePending)
+        {
+            return;
+        }
+
+        _selectedIndexChangePending = false;
+
+        if (Text == _currentText && SelectedIndex != _selectedIndexOnDropDown)
+        {
+            PInvokeCore.SendMessage(this, PInvoke.CB_SETCURSEL, (WPARAM)_selectedIndexOnDropDown);
+            UpdateText();
         }
     }
 

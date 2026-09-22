@@ -2682,7 +2682,7 @@ public partial class TreeView : Control
         }
     }
 
-    private void WmMouseDown(ref Message m, MouseButtons button, int clicks)
+    private void WmMouseDown(ref Message m, MouseButtons button, int clicks, bool callDefWndProc = true)
     {
         // Required to put the TreeView in sane-state for painting proper highlighting of selectedNodes.
         // If the user shows the ContextMenu bu overriding the WndProc( ), then the treeView
@@ -2696,7 +2696,7 @@ public partial class TreeView : Control
         OnMouseDown(new MouseEventArgs(button, clicks, PARAM.ToPoint(m.LParamInternal)));
 
         // If Validation is cancelled don't fire any events through the Windows TreeView's message loop.
-        if (!ValidationCancelled)
+        if (!ValidationCancelled && callDefWndProc)
         {
             DefWndProc(ref m);
         }
@@ -3247,7 +3247,11 @@ public partial class TreeView : Control
                 WmNotify(ref m);
                 break;
             case PInvokeCore.WM_LBUTTONDBLCLK:
-                WmMouseDown(ref m, MouseButtons.Left, 2);
+                // The native TreeView toggles a checkbox for the second click without
+                // sending a notification that can be translated into AfterCheck.
+                bool isStateImage = CheckBoxes
+                    && HitTest(PARAM.ToPoint(m.LParamInternal)).Location == TreeViewHitTestLocations.StateImage;
+                WmMouseDown(ref m, MouseButtons.Left, 2, callDefWndProc: !isStateImage);
 
                 // Just maintain state and fire double click in final mouseUp.
                 _treeViewState[TREEVIEWSTATE_doubleclickFired] = true;

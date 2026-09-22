@@ -5135,6 +5135,47 @@ public class TreeViewTests
         Assert.True(control.IsHandleCreated);
     }
 
+    [WinFormsFact]
+    public void TreeView_DoubleClickOnCheckBox_DoesNotToggleNativeState()
+    {
+        using SubTreeView control = new() { CheckBoxes = true };
+        TreeNode node = new("Test");
+        control.Nodes.Add(node);
+        Assert.NotEqual(IntPtr.Zero, control.Handle);
+
+        node.Checked = true;
+        Point stateImagePoint = default;
+        for (int x = 0; x < node.Bounds.Left && stateImagePoint == default; x++)
+        {
+            for (int y = node.Bounds.Top; y < node.Bounds.Bottom; y++)
+            {
+                Point point = new(x, y);
+                if (control.HitTest(point).Location == TreeViewHitTestLocations.StateImage)
+                {
+                    stateImagePoint = point;
+                    break;
+                }
+            }
+        }
+
+        Assert.NotEqual(default, stateImagePoint);
+        int afterCheckCallCount = 0;
+        control.AfterCheck += (sender, e) => afterCheckCallCount++;
+
+        control.SendDoubleClick(stateImagePoint);
+
+        TVITEMW item = new()
+        {
+            mask = TVITEM_MASK.TVIF_HANDLE | TVITEM_MASK.TVIF_STATE,
+            stateMask = TREE_VIEW_ITEM_STATE_FLAGS.TVIS_STATEIMAGEMASK,
+            hItem = node.HTREEITEM
+        };
+        Assert.Equal(1, (int)PInvokeCore.SendMessage(control, PInvoke.TVM_GETITEMW, 0, ref item));
+        Assert.Equal((TREE_VIEW_ITEM_STATE_FLAGS)8192, item.state);
+        Assert.True(node.Checked);
+        Assert.Equal(0, afterCheckCallCount);
+    }
+
     public static IEnumerable<object[]> HitTest_NotEmptyInvalid_TestData()
     {
         yield return new object[] { new Point(int.MinValue, int.MinValue), TreeViewHitTestLocations.AboveClientArea | TreeViewHitTestLocations.LeftOfClientArea };
@@ -7571,6 +7612,16 @@ public class TreeViewTests
 
     private class SubTreeView : TreeView
     {
+        public void SendDoubleClick(Point point)
+        {
+            Message message = Message.Create(
+                Handle,
+                (int)PInvokeCore.WM_LBUTTONDBLCLK,
+                IntPtr.Zero,
+                (IntPtr)(point.X | (point.Y << 16)));
+            base.WndProc(ref message);
+        }
+
         public new bool CanEnableIme => base.CanEnableIme;
 
         public new bool CanRaiseEvents => base.CanRaiseEvents;

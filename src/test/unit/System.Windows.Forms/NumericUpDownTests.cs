@@ -21,6 +21,21 @@ public class NumericUpDownTests
     }
 
     [WinFormsFact]
+    public void NumericUpDown_ResetTextThenSetValueToMinimum_RestoresDisplayedValue()
+    {
+        using NumericUpDown upDown = new()
+        {
+            Minimum = 1,
+            Value = 1
+        };
+
+        upDown.ResetText();
+        upDown.Value = upDown.Minimum;
+
+        upDown.Text.Should().Be("1");
+    }
+
+    [WinFormsFact]
     public void NumericUpDown_ModernVisualStylesMode_PreferredSizeIncludesButtonGroup()
     {
         using NumericUpDown nud = new()

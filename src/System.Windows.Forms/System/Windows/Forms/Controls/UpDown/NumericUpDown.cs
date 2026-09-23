@@ -264,6 +264,16 @@ public partial class NumericUpDown : UpDownBase, ISupportInitialize
         set => base.Text = value;
     }
 
+    /// <summary>
+    ///  Resets the displayed text to the current numeric value.
+    /// </summary>
+    public override void ResetText()
+    {
+        base.ResetText();
+        _currentValueChanged = true;
+        UpdateEditText();
+    }
+
     [Browsable(false)]
     [EditorBrowsable(EditorBrowsableState.Never)]
     public new event EventHandler? TextChanged

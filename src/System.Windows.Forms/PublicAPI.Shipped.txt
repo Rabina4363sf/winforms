@@ -1070,6 +1070,7 @@ override System.Windows.Forms.DateTimePicker.DateTimePickerAccessibleObject.Stat
 override System.Windows.Forms.DateTimePicker.DateTimePickerAccessibleObject.Value.get -> string!
 override System.Windows.Forms.DateTimePicker.DefaultSize.get -> System.Drawing.Size
 override System.Windows.Forms.DateTimePicker.DestroyHandle() -> void
+override System.Windows.Forms.DateTimePicker.OnValidating(System.ComponentModel.CancelEventArgs! e) -> void
 override System.Windows.Forms.DateTimePicker.DoubleBuffered.get -> bool
 override System.Windows.Forms.DateTimePicker.DoubleBuffered.set -> void
 override System.Windows.Forms.DateTimePicker.ForeColor.get -> System.Drawing.Color

@@ -84,6 +84,8 @@ public partial class DateTimePicker : Control
     private bool _userHasSetValue;
     private DateTime _value = DateTime.Now;
     private DateTime _creationTime = DateTime.Now;
+    private DateTime? _valueSetDuringValidation;
+    private bool _isValidating;
     // Reconcile out-of-range min/max values in the property getters.
     private DateTime _maxDateTime = DateTime.MaxValue;
     private DateTime _minDateTime = DateTime.MinValue;
@@ -886,6 +888,10 @@ public partial class DateTimePicker : Control
 
             _value = value;
             _userHasSetValue = true;
+            if (_isValidating)
+            {
+                _valueSetDuringValidation = value;
+            }
 
             if (IsHandleCreated)
             {
@@ -923,6 +929,23 @@ public partial class DateTimePicker : Control
     {
         add => _onRightToLeftLayoutChanged += value;
         remove => _onRightToLeftLayoutChanged -= value;
+    }
+
+    protected override void OnValidating(CancelEventArgs e)
+    {
+        _isValidating = true;
+        try
+        {
+            base.OnValidating(e);
+        }
+        finally
+        {
+            _isValidating = false;
+            if (e.Cancel)
+            {
+                _valueSetDuringValidation = null;
+            }
+        }
     }
 
     /// <summary>
@@ -1473,6 +1496,21 @@ public partial class DateTimePicker : Control
     private unsafe void WmDateTimeChange(ref Message m)
     {
         NMDATETIMECHANGE* nmdtc = (NMDATETIMECHANGE*)(nint)m.LParamInternal;
+
+        if (_valueSetDuringValidation is DateTime valueSetDuringValidation
+            && nmdtc->dwFlags != NMDATETIMECHANGE_FLAGS.GDT_NONE
+            && (DateTime)nmdtc->st != valueSetDuringValidation)
+        {
+            _valueSetDuringValidation = null;
+            _value = valueSetDuringValidation;
+            _validTime = true;
+            _userHasSetValue = true;
+
+            SYSTEMTIME systemTime = (SYSTEMTIME)valueSetDuringValidation;
+            PInvokeCore.SendMessage(this, PInvoke.DTM_SETSYSTEMTIME, (WPARAM)(uint)NMDATETIMECHANGE_FLAGS.GDT_VALID, ref systemTime);
+            return;
+        }
+
         DateTime temp = _value;
         bool oldvalid = _validTime;
         if (nmdtc->dwFlags != NMDATETIMECHANGE_FLAGS.GDT_NONE)
@@ -1550,6 +1588,15 @@ public partial class DateTimePicker : Control
     {
         switch (m.MsgInternal)
         {
+            case PInvokeCore.WM_KILLFOCUS:
+                base.WndProc(ref m);
+                if (_valueSetDuringValidation is DateTime value)
+                {
+                    _valueSetDuringValidation = null;
+                    Value = value;
+                }
+
+                break;
             case PInvokeCore.WM_LBUTTONDOWN:
                 Focus();
                 if (!ValidationCancelled)

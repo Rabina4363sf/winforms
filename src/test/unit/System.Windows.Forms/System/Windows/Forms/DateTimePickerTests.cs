@@ -501,6 +501,17 @@ public class DateTimePickerTests : IDisposable
         _dateTimePicker.Value.Should().Be(DateTimePicker.MaximumDateTime);
     }
 
+    [WinFormsFact]
+    public void DateTimePicker_Value_SetWithHandle_RemainsSet()
+    {
+        DateTime expected = new(2023, 1, 1, 12, 34, 56);
+        _dateTimePicker.CreateControl();
+
+        _dateTimePicker.Value = expected;
+
+        _dateTimePicker.Value.Should().Be(expected);
+    }
+
     [WinFormsTheory]
     [InlineData("0001-01-01")]
     [InlineData("9999-12-31")]

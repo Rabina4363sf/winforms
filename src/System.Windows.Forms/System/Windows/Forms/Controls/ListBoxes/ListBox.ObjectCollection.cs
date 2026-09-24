@@ -90,7 +90,7 @@ public partial class ListBox
             return index;
         }
 
-        private int AddInternal(object item)
+        internal virtual int AddInternal(object item)
         {
             ArgumentNullException.ThrowIfNull(item);
 
@@ -231,7 +231,12 @@ public partial class ListBox
         public virtual void Clear()
         {
             _owner.CheckNoDataSource();
+            OnItemsClearing();
             ClearInternal();
+        }
+
+        internal virtual void OnItemsClearing()
+        {
         }
 
         /// <summary>

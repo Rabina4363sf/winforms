@@ -389,6 +389,82 @@ public class CheckedListBoxTests
         Assert.Throws<InvalidEnumArgumentException>("value", () => control.SetItemCheckState(0, value));
     }
 
+    [WinFormsFact]
+    public void CheckedListBox_ItemsClear_ReAddItems_RestoresCheckStates()
+    {
+        using CheckedListBox control = new();
+        control.Items.Add("item1", CheckState.Checked);
+        control.Items.Add("item2", CheckState.Indeterminate);
+        control.Items.Add("item3", CheckState.Unchecked);
+
+        control.Items.Clear();
+        control.Items.AddRange("item1", "item2", "item3");
+
+        Assert.Equal(CheckState.Checked, control.GetItemCheckState(0));
+        Assert.Equal(CheckState.Indeterminate, control.GetItemCheckState(1));
+        Assert.Equal(CheckState.Unchecked, control.GetItemCheckState(2));
+    }
+
+    [WinFormsFact]
+    public void CheckedListBox_ItemsClear_RepeatedFiltering_PreservesHiddenItemCheckStates()
+    {
+        using CheckedListBox control = new();
+        control.Items.Add("item1", CheckState.Checked);
+        control.Items.Add("item2", CheckState.Indeterminate);
+        control.Items.Add("item3", CheckState.Unchecked);
+
+        control.Items.Clear();
+        control.Items.Add("item2");
+
+        Assert.Equal(CheckState.Indeterminate, control.GetItemCheckState(0));
+
+        control.Items.Clear();
+        control.Items.AddRange("item1", "item2", "item3");
+
+        Assert.Equal(CheckState.Checked, control.GetItemCheckState(0));
+        Assert.Equal(CheckState.Indeterminate, control.GetItemCheckState(1));
+        Assert.Equal(CheckState.Unchecked, control.GetItemCheckState(2));
+    }
+
+    [WinFormsFact]
+    public void CheckedListBox_ItemsClear_ReAddEqualItems_RestoresCheckStatesInOrder()
+    {
+        using CheckedListBox control = new();
+        control.Items.Add("item", CheckState.Checked);
+        control.Items.Add("item", CheckState.Indeterminate);
+
+        control.Items.Clear();
+        control.Items.Add("item");
+        control.Items.Add("item");
+
+        Assert.Equal(CheckState.Checked, control.GetItemCheckState(0));
+        Assert.Equal(CheckState.Indeterminate, control.GetItemCheckState(1));
+    }
+
+    [WinFormsFact]
+    public void CheckedListBox_ItemsRemove_ReAddItem_DoesNotRestoreCheckState()
+    {
+        using CheckedListBox control = new();
+        control.Items.Add("item", CheckState.Checked);
+
+        control.Items.Remove("item");
+        control.Items.Add("item");
+
+        Assert.Equal(CheckState.Unchecked, control.GetItemCheckState(0));
+    }
+
+    [WinFormsFact]
+    public void CheckedListBox_ItemsClear_AddWithCheckState_UsesExplicitCheckState()
+    {
+        using CheckedListBox control = new();
+        control.Items.Add("item", CheckState.Checked);
+
+        control.Items.Clear();
+        control.Items.Add("item", CheckState.Unchecked);
+
+        Assert.Equal(CheckState.Unchecked, control.GetItemCheckState(0));
+    }
+
     [WinFormsTheory]
     [InlineData(true, CheckState.Checked)]
     [InlineData(false, CheckState.Unchecked)]

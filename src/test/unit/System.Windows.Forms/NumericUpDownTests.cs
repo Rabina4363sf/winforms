@@ -756,6 +756,25 @@ public class NumericUpDownTests
     }
 
     [WinFormsFact]
+    public void NumericUpDown_OnMouseWheel_IncrementsByOneIncrementPerNotch()
+    {
+        using SubNumericUpDown upDown = new()
+        {
+            Value = 10,
+            Increment = 0.1m
+        };
+
+        upDown.CallOnMouseWheel(new MouseEventArgs(
+            MouseButtons.None,
+            clicks: 0,
+            x: 0,
+            y: 0,
+            delta: SystemInformation.MouseWheelScrollDelta));
+
+        upDown.Value.Should().Be(10.1m);
+    }
+
+    [WinFormsFact]
     public void NumericUpDown_DownButton_SpinningTrue_StopsAcceleration()
     {
         using SubNumericUpDown upDown = new()
@@ -891,6 +910,11 @@ public class NumericUpDownTests
         public void CallUpdateEditText()
         {
             UpdateEditText();
+        }
+
+        public void CallOnMouseWheel(MouseEventArgs e)
+        {
+            OnMouseWheel(e);
         }
     }
 }

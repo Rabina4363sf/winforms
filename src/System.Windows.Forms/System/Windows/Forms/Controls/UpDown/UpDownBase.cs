@@ -18,7 +18,6 @@ namespace System.Windows.Forms;
 [Designer($"System.Windows.Forms.Design.UpDownBaseDesigner, {Assemblies.SystemDesign}")]
 public abstract partial class UpDownBase : ContainerControl
 {
-    private const int DefaultWheelScrollLinesPerPage = 1;
     private const int DefaultButtonsWidth = 16;
     private const int DefaultControlWidth = 120;
 
@@ -823,8 +822,7 @@ public abstract partial class UpDownBase : ContainerControl
             return;
         }
 
-        int wheelScrollLines = SystemInformation.MouseWheelScrollLines;
-        if (wheelScrollLines == 0)
+        if (SystemInformation.MouseWheelScrollLines == 0)
         {
             // Do not scroll when the user system setting is 0 lines per notch
             return;
@@ -834,16 +832,9 @@ public abstract partial class UpDownBase : ContainerControl
         Debug.Assert(_wheelDelta < PInvoke.WHEEL_DELTA, "wheelDelta is too big");
         _wheelDelta += e.Delta;
 
-        float partialNotches;
-        partialNotches = _wheelDelta / (float)PInvoke.WHEEL_DELTA;
-
-        if (wheelScrollLines == -1)
-        {
-            wheelScrollLines = DefaultWheelScrollLinesPerPage;
-        }
-
-        // Evaluate number of bands to scroll
-        int scrollBands = (int)(wheelScrollLines * partialNotches);
+        // A wheel notch changes the value by one increment. Unlike scrollable controls, an
+        // up-down control must not use the system scroll-lines setting as an increment multiplier.
+        int scrollBands = _wheelDelta / (int)PInvoke.WHEEL_DELTA;
 
         if (scrollBands != 0)
         {
@@ -857,7 +848,7 @@ public abstract partial class UpDownBase : ContainerControl
                     absScrollBands--;
                 }
 
-                _wheelDelta -= (int)(scrollBands * (PInvoke.WHEEL_DELTA / (float)wheelScrollLines));
+                _wheelDelta -= scrollBands * (int)PInvoke.WHEEL_DELTA;
             }
             else
             {
@@ -868,7 +859,7 @@ public abstract partial class UpDownBase : ContainerControl
                     absScrollBands--;
                 }
 
-                _wheelDelta -= (int)(scrollBands * (PInvoke.WHEEL_DELTA / (float)wheelScrollLines));
+                _wheelDelta -= scrollBands * (int)PInvoke.WHEEL_DELTA;
             }
         }
     }

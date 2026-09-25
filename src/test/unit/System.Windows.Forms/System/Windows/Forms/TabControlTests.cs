@@ -775,6 +775,26 @@ public class TabControlTests
     }
 
     [WinFormsFact]
+    public void TabControl_Resize_UpdatesBoundsOfAllTabPages()
+    {
+        using TabControl control = new()
+        {
+            Size = new Size(300, 120)
+        };
+        using TabPage page1 = new();
+        using TabPage page2 = new();
+        control.TabPages.Add(page1);
+        control.TabPages.Add(page2);
+
+        Assert.NotEqual(IntPtr.Zero, control.Handle);
+
+        control.Size = new Size(340, 160);
+
+        Assert.Equal(control.DisplayRectangle, page1.Bounds);
+        Assert.Equal(control.DisplayRectangle, page2.Bounds);
+    }
+
+    [WinFormsFact]
     public void TabControl_DisplayRectangle_GetDisposed_ReturnsExpected()
     {
         using TabControl control = new();

@@ -1841,28 +1841,31 @@ public partial class TabControl : Control
 
             if (index != -1)
             {
-                // Changing the bounds of the TabPage during scaling
-                // will force a layout to occur. After this layout
-                // the TabPage will then be scaled again resulting
-                // in incorrect sizes. Suspend Layout in this case.
-                if (_currentlyScaling)
+                Rectangle displayRectangle = DisplayRectangle;
+
+                for (int i = 0; i < tabPages.Length; i++)
                 {
-                    tabPages[index].SuspendLayout();
+                    // Changing the bounds of the TabPage during scaling
+                    // will force a layout to occur. After this layout
+                    // the TabPage will then be scaled again resulting
+                    // in incorrect sizes. Suspend Layout in this case.
+                    if (_currentlyScaling)
+                    {
+                        tabPages[i].SuspendLayout();
+                    }
+
+                    tabPages[i].Bounds = displayRectangle;
+
+                    if (_currentlyScaling)
+                    {
+                        tabPages[i].ResumeLayout(false);
+                    }
                 }
 
-                tabPages[index].Bounds = DisplayRectangle;
-
-                // After changing the Bounds of TabPages, we need to
-                // make TabPages Redraw.
-                // Use Invalidate directly here has no performance
-                // issue, since ReSize is calling low frequency.
+                // After changing the Bounds of the selected TabPage, make it redraw.
+                // Use Invalidate directly here has no performance issue, since Resize is
+                // called at low frequency.
                 tabPages[index].Invalidate();
-
-                if (_currentlyScaling)
-                {
-                    tabPages[index].ResumeLayout(false);
-                }
-
                 tabPages[index].Visible = true;
                 if (updateFocus)
                 {

@@ -3251,7 +3251,10 @@ public partial class TreeView : Control
                 WmNotify(ref m);
                 break;
             case PInvokeCore.WM_LBUTTONDBLCLK:
-                WmMouseDown(ref m, MouseButtons.Left, 2);
+                if (!WmMouseDownOnCheckBox(ref m, 2))
+                {
+                    WmMouseDown(ref m, MouseButtons.Left, 2);
+                }
 
                 // Just maintain state and fire double click in final mouseUp.
                 _treeViewState[TREEVIEWSTATE_doubleclickFired] = true;
@@ -3275,33 +3278,7 @@ public partial class TreeView : Control
 
                 // Always reset the MouseUpFired.
                 _treeViewState[TREEVIEWSTATE_mouseUpFired] = false;
-                TVHITTESTINFO tvhip = new()
-                {
-                    pt = PARAM.ToPoint(m.LParamInternal)
-                };
-
-                _mouseDownNode = PInvokeCore.SendMessage(this, PInvoke.TVM_HITTEST, 0, ref tvhip);
-
-                // This gets around the TreeView behavior of temporarily moving the selection
-                // highlight to a node when the user clicks on its checkbox.
-                if ((tvhip.flags & TVHITTESTINFO_FLAGS.TVHT_ONITEMSTATEICON) != 0)
-                {
-                    // We do not pass the Message to the Control so fire MouseDown.
-                    OnMouseDown(new MouseEventArgs(MouseButtons.Left, 1, PARAM.ToPoint(m.LParamInternal)));
-                    if (!ValidationCancelled && CheckBoxes)
-                    {
-                        TreeNode? node = NodeFromHandle(_mouseDownNode);
-                        bool eventReturn = TreeViewBeforeCheck(node, TreeViewAction.ByMouse);
-                        if (!eventReturn && node is not null)
-                        {
-                            node.CheckedInternal = !node.CheckedInternal;
-                            TreeViewAfterCheck(node, TreeViewAction.ByMouse);
-                        }
-                    }
-
-                    m.ResultInternal = (LRESULT)0;
-                }
-                else
+                if (!WmMouseDownOnCheckBox(ref m, 1))
                 {
                     WmMouseDown(ref m, MouseButtons.Left, 1);
                 }
@@ -3472,5 +3449,36 @@ public partial class TreeView : Control
                 base.WndProc(ref m);
                 break;
         }
+    }
+
+    private bool WmMouseDownOnCheckBox(ref Message m, int clicks)
+    {
+        TVHITTESTINFO tvhip = new()
+        {
+            pt = PARAM.ToPoint(m.LParamInternal)
+        };
+
+        _mouseDownNode = PInvokeCore.SendMessage(this, PInvoke.TVM_HITTEST, 0, ref tvhip);
+
+        if ((tvhip.flags & TVHITTESTINFO_FLAGS.TVHT_ONITEMSTATEICON) == 0)
+        {
+            return false;
+        }
+
+        // We do not pass the message to the control, so fire MouseDown ourselves.
+        OnMouseDown(new MouseEventArgs(MouseButtons.Left, clicks, PARAM.ToPoint(m.LParamInternal)));
+        if (!ValidationCancelled && CheckBoxes)
+        {
+            TreeNode? node = NodeFromHandle(_mouseDownNode);
+            bool eventReturn = TreeViewBeforeCheck(node, TreeViewAction.ByMouse);
+            if (!eventReturn && node is not null)
+            {
+                node.CheckedInternal = !node.CheckedInternal;
+                TreeViewAfterCheck(node, TreeViewAction.ByMouse);
+            }
+        }
+
+        m.ResultInternal = (LRESULT)0;
+        return true;
     }
 }

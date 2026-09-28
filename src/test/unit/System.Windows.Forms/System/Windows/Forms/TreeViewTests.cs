@@ -7569,6 +7569,49 @@ public class TreeViewTests
         treeView.VisibleCount.Should().Be(5);
     }
 
+    [WinFormsFact]
+    public void TreeView_DoubleClickCheckBox_RaisesAfterCheck()
+    {
+        using TreeView treeView = new()
+        {
+            CheckBoxes = true
+        };
+        TreeNode node = new("Node");
+        treeView.Nodes.Add(node);
+        treeView.CreateControl();
+
+        int afterCheckCallCount = 0;
+        treeView.AfterCheck += (sender, e) =>
+        {
+            e.Action.Should().Be(TreeViewAction.ByMouse);
+            afterCheckCallCount++;
+        };
+
+        Point checkBoxLocation = Point.Empty;
+        for (int x = 0; x < 30 && checkBoxLocation == Point.Empty; x++)
+        {
+            for (int y = node.Bounds.Top; y < node.Bounds.Bottom; y++)
+            {
+                Point location = new(x, y);
+                if (treeView.HitTest(location).Location == TreeViewHitTestLocations.StateImage)
+                {
+                    checkBoxLocation = location;
+                    break;
+                }
+            }
+        }
+
+        checkBoxLocation.Should().NotBe(Point.Empty);
+        PInvokeCore.SendMessage(
+            treeView,
+            PInvokeCore.WM_LBUTTONDBLCLK,
+            0,
+            PARAM.FromPoint(checkBoxLocation));
+
+        node.Checked.Should().BeTrue();
+        afterCheckCallCount.Should().Be(1);
+    }
+
     private class SubTreeView : TreeView
     {
         public new bool CanEnableIme => base.CanEnableIme;

@@ -2538,9 +2538,6 @@ public partial class RichTextBox : TextBoxBase
 
         // Initialize colors before initializing RTF, otherwise CFE_AUTOCOLOR will be in effect
         // and our text will all be Color.WindowText.
-        bool autoWordSelection = AutoWordSelection;
-        AutoWordSelection = autoWordSelection;
-
         PInvokeCore.SendMessage(this, PInvokeCore.EM_SETBKGNDCOLOR, (WPARAM)0, (LPARAM)BackColor);
         InternalSetForeColor(ForeColor);
 
@@ -2577,6 +2574,16 @@ public partial class RichTextBox : TextBoxBase
         // Since we can't send EM_SETSEL until RTF has been set,
         // we can't rely on base to do it for us.
         SetSelectionOnHandle();
+
+        // Setting the text can reset RichEdit's auto-word-selection option. RichEdit requires
+        // the option to be enabled before it can be disabled with ECOOP_XOR.
+        bool autoWordSelection = AutoWordSelection;
+        if (!autoWordSelection)
+        {
+            AutoWordSelection = true;
+        }
+
+        AutoWordSelection = autoWordSelection;
 
         if (ShowSelectionMargin)
         {

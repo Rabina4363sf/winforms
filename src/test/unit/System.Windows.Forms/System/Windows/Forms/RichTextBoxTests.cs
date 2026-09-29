@@ -643,6 +643,19 @@ public partial class RichTextBoxTests
         Assert.Equal(expected, (int)PInvokeCore.SendMessage(control, PInvokeCore.EM_GETOPTIONS));
     }
 
+    [WinFormsFact]
+    public void RichTextBox_AutoWordSelection_SetBeforeHandleCreationWithText_DisablesNativeOption()
+    {
+        using RichTextBox control = new()
+        {
+            AutoWordSelection = false,
+            Text = "Just another foobar"
+        };
+
+        Assert.NotEqual(IntPtr.Zero, control.Handle);
+        Assert.Equal(64, (int)PInvokeCore.SendMessage(control, PInvokeCore.EM_GETOPTIONS));
+    }
+
     public static IEnumerable<object[]> BackColor_Set_TestData()
     {
         yield return new object[] { Color.Empty, SystemColors.Window };

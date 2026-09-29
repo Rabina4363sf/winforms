@@ -224,8 +224,8 @@ public abstract class ScrollProperties
                 }
 
                 _value = value;
-                UpdateScrollInfo();
                 UpdateDisplayPosition();
+                UpdateScrollInfo();
             }
         }
     }

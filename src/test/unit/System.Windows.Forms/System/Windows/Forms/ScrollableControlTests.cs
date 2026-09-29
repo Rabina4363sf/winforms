@@ -15,6 +15,33 @@ namespace System.Windows.Forms.Tests;
 public class ScrollableControlTests
 {
     [WinFormsFact]
+    public unsafe void ScrollableControl_ScrollValueChanged_UpdatesNativeScrollBar()
+    {
+        using Panel control = new()
+        {
+            AutoScroll = true,
+            Size = new Size(100, 100)
+        };
+        control.SuspendLayout();
+        control.Controls.Add(new Control { Location = new Point(0, 0), Size = new Size(100, 1000) });
+        Assert.NotEqual(IntPtr.Zero, control.Handle);
+
+        int value = Math.Min(50, control.VerticalScroll.Maximum - control.VerticalScroll.LargeChange + 1);
+
+        control.VerticalScroll.Value = value;
+
+        SCROLLINFO scrollInfo = new()
+        {
+            cbSize = (uint)sizeof(SCROLLINFO),
+            fMask = SCROLLINFO_MASK.SIF_ALL
+        };
+
+        Assert.True(PInvoke.GetScrollInfo(control, SCROLLBAR_CONSTANTS.SB_VERT, ref scrollInfo));
+        Assert.True(control.VerticalScroll.Visible);
+        Assert.Equal(value, scrollInfo.nPos);
+    }
+
+    [WinFormsFact]
     public void ScrollableControl_Ctor_Default()
     {
         using SubScrollableControl control = new();

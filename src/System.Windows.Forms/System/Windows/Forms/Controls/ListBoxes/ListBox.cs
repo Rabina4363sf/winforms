@@ -2097,6 +2097,8 @@ public partial class ListBox : ListControl
     {
         ArgumentNullException.ThrowIfNull(value);
 
+        int selectedIndex = SelectedIndex;
+
         BeginUpdate();
         Items.ClearInternal();
         Items.AddRangeInternal(value);
@@ -2108,21 +2110,24 @@ public partial class ListBox : ListControl
         // it will be provided before changing the list though...
         if (DataManager is not null)
         {
-            if (DataSource is ICurrencyManagerProvider)
-            {
-                _selectedValueChangedFired = false;
-            }
+            _selectedValueChangedFired = false;
 
             if (IsHandleCreated)
             {
                 PInvokeCore.SendMessage(this, PInvoke.LB_SETCURSEL, (WPARAM)DataManager.Position);
             }
 
-            // if the list changed and we still did not fire the
-            // onSelectedChanged event, then fire it now;
             if (!_selectedValueChangedFired)
             {
-                OnSelectedValueChanged(EventArgs.Empty);
+                if (selectedIndex != SelectedIndex)
+                {
+                    OnSelectedIndexChanged(EventArgs.Empty);
+                }
+                else
+                {
+                    OnSelectedValueChanged(EventArgs.Empty);
+                }
+
                 _selectedValueChangedFired = false;
             }
         }

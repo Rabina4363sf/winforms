@@ -360,4 +360,16 @@ public class AutoCompleteStringCollectionTests
             enumerator.Reset();
         }
     }
+
+    [WinFormsFact]
+    public void AutoCompleteStringCollection_GenericIList_UsesTypedMembers()
+    {
+        IList<string> collection = new AutoCompleteStringCollection();
+
+        collection.Add("value");
+
+        Assert.Equal("value", Assert.Single(collection));
+        Assert.True(collection.Remove("value"));
+        Assert.False(collection.Remove("value"));
+    }
 }

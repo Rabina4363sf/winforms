@@ -9,7 +9,7 @@ namespace System.Windows.Forms;
 /// <summary>
 ///  Represents a collection of strings.
 /// </summary>
-public class AutoCompleteStringCollection : IList
+public class AutoCompleteStringCollection : IList, IList<string>
 {
     private CollectionChangeEventHandler? _onCollectionChanged;
     private readonly List<string> _data = [];
@@ -45,6 +45,8 @@ public class AutoCompleteStringCollection : IList
 
     bool IList.IsFixedSize => ((IList)_data).IsFixedSize;
 
+    bool ICollection<string>.IsReadOnly => IsReadOnly;
+
     public event CollectionChangeEventHandler? CollectionChanged
     {
         add => _onCollectionChanged += value;
@@ -72,6 +74,8 @@ public class AutoCompleteStringCollection : IList
         OnCollectionChanged(new CollectionChangeEventArgs(CollectionChangeAction.Add, value));
         return index;
     }
+
+    void ICollection<string>.Add(string item) => Add(item);
 
     /// <summary>
     ///  Copies the elements of a string array to the end of the <see cref="AutoCompleteStringCollection"/>.
@@ -163,6 +167,17 @@ public class AutoCompleteStringCollection : IList
         OnCollectionChanged(new CollectionChangeEventArgs(CollectionChangeAction.Remove, value));
     }
 
+    bool ICollection<string>.Remove(string item)
+    {
+        if (!Contains(item))
+        {
+            return false;
+        }
+
+        Remove(item);
+        return true;
+    }
+
     /// <summary>
     ///  Removes the string at the specified index of the <see cref="AutoCompleteStringCollection"/>.
     /// </summary>
@@ -197,6 +212,8 @@ public class AutoCompleteStringCollection : IList
     void ICollection.CopyTo(Array array, int index) => ((ICollection)_data).CopyTo(array, index);
 
     public IEnumerator GetEnumerator() => _data.GetEnumerator();
+
+    IEnumerator<string> IEnumerable<string>.GetEnumerator() => _data.GetEnumerator();
 
     internal string[] ToArray() => [.. _data];
 }

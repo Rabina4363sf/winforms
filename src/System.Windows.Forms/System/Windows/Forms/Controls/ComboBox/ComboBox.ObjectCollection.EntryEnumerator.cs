@@ -13,7 +13,7 @@ public partial class ComboBox
         ///  EntryEnumerator is an enumerator that will enumerate over
         ///  a given state mask.
         /// </summary>
-        private class EntryEnumerator : IEnumerator
+        private class EntryEnumerator : IEnumerator, IEnumerator<object>
         {
             private readonly List<Entry> _entries;
             private int _current;
@@ -66,6 +66,12 @@ public partial class ComboBox
 
                     return _entries[_current].Item;
                 }
+            }
+
+            object IEnumerator<object>.Current => ((IEnumerator)this).Current;
+
+            void IDisposable.Dispose()
+            {
             }
         }
     }

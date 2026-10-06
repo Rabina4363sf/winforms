@@ -10,7 +10,7 @@ namespace System.Windows.Forms;
 ///  A collection of listview groups.
 /// </summary>
 [ListBindable(false)]
-public class ListViewGroupCollection : IList
+public class ListViewGroupCollection : IList, IList<ListViewGroup>
 {
     private readonly ListView _listView;
 
@@ -30,6 +30,8 @@ public class ListViewGroupCollection : IList
     bool IList.IsFixedSize => false;
 
     bool IList.IsReadOnly => false;
+
+    bool ICollection<ListViewGroup>.IsReadOnly => false;
 
     private List<ListViewGroup> List => _list ??= [];
 
@@ -148,6 +150,8 @@ public class ListViewGroupCollection : IList
         return Add(group);
     }
 
+    void ICollection<ListViewGroup>.Add(ListViewGroup item) => Add(item);
+
     public void AddRange(params ListViewGroup[] groups)
     {
         ArgumentNullException.ThrowIfNull(groups);
@@ -220,7 +224,11 @@ public class ListViewGroupCollection : IList
 
     public void CopyTo(Array array, int index) => ((ICollection)List).CopyTo(array, index);
 
+    void ICollection<ListViewGroup>.CopyTo(ListViewGroup[] array, int index) => List.CopyTo(array, index);
+
     public IEnumerator GetEnumerator() => List.GetEnumerator();
+
+    IEnumerator<ListViewGroup> IEnumerable<ListViewGroup>.GetEnumerator() => List.GetEnumerator();
 
     public int IndexOf(ListViewGroup value) => List.IndexOf(value);
 
@@ -234,6 +242,7 @@ public class ListViewGroupCollection : IList
         return IndexOf(group);
     }
 
+#pragma warning disable CA1725 // The parameter name is part of the existing public API.
     public void Insert(int index, ListViewGroup group)
     {
         ArgumentNullException.ThrowIfNull(group);
@@ -253,6 +262,7 @@ public class ListViewGroupCollection : IList
             MoveGroupItems(group);
         }
     }
+#pragma warning restore CA1725
 
     void IList.Insert(int index, object? value)
     {
@@ -289,6 +299,17 @@ public class ListViewGroupCollection : IList
         {
             _listView.RemoveGroupFromListView(group);
         }
+    }
+
+    bool ICollection<ListViewGroup>.Remove(ListViewGroup item)
+    {
+        if (!Contains(item))
+        {
+            return false;
+        }
+
+        Remove(item);
+        return true;
     }
 
     void IList.Remove(object? value)

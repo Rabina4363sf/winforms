@@ -18,6 +18,19 @@ namespace System.Windows.Forms.Tests;
 public class ComboBoxTests
 {
     [WinFormsFact]
+    public void ComboBoxObjectCollection_GenericIList_UsesTypedMembers()
+    {
+        using ComboBox control = new();
+        IList<object> collection = control.Items;
+
+        collection.Add("Item");
+
+        Assert.Equal("Item", Assert.Single(collection));
+        Assert.True(collection.Remove("Item"));
+        Assert.False(collection.Remove("Item"));
+    }
+
+    [WinFormsFact]
     public void ComboBox_Ctor_Default()
     {
         using SubComboBox control = new();

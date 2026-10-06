@@ -359,6 +359,20 @@ public class ListViewGroupCollectionTests
     }
 
     [WinFormsFact]
+    public void ListViewGroupCollection_GenericIList_UsesTypedMembers()
+    {
+        using ListView listView = new();
+        IList<ListViewGroup> collection = listView.Groups;
+        ListViewGroup group = new();
+
+        collection.Add(group);
+
+        Assert.Same(group, Assert.Single(collection));
+        Assert.True(collection.Remove(group));
+        Assert.False(collection.Remove(group));
+    }
+
+    [WinFormsFact]
     public void ListViewGroupCollection_Item_SetStringNullValue_ThrowsArgumentNullException()
     {
         using ListView listView = new();

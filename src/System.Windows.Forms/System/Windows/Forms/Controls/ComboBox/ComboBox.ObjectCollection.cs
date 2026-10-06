@@ -11,7 +11,7 @@ namespace System.Windows.Forms;
 public partial class ComboBox
 {
     [ListBindable(false)]
-    public partial class ObjectCollection : IList, IComparer<Entry>
+    public partial class ObjectCollection : IList, IList<object>, IComparer<Entry>
     {
         private readonly ComboBox _owner;
         private ComboBoxAccessibleObject? _ownerComboBoxAccessibleObject;
@@ -90,6 +90,14 @@ public partial class ComboBox
             {
                 return false;
             }
+        }
+
+        bool ICollection<object>.IsReadOnly => IsReadOnly;
+
+        object IList<object>.this[int index]
+        {
+            get => this[index]!;
+            set => SetItemInternal(index, value);
         }
 
         /// <summary>
@@ -173,6 +181,8 @@ public partial class ComboBox
         {
             return Add(item!);
         }
+
+        void ICollection<object>.Add(object item) => Add(item);
 
         public void AddRange(params object[] items)
         {
@@ -261,6 +271,7 @@ public partial class ComboBox
         /// <summary>
         ///  Copies the ComboBox Items collection to a destination array.
         /// </summary>
+#pragma warning disable CA1725 // The parameter name is part of the existing public API.
         public void CopyTo(object[] destination, int arrayIndex)
         {
             ArgumentNullException.ThrowIfNull(destination);
@@ -275,6 +286,7 @@ public partial class ComboBox
                 destination[i + arrayIndex] = InnerList[i].Item;
             }
         }
+#pragma warning restore CA1725
 
         void ICollection.CopyTo(Array destination, int index)
         {
@@ -295,6 +307,8 @@ public partial class ComboBox
         ///  Returns an enumerator for the ComboBox Items collection.
         /// </summary>
         public IEnumerator GetEnumerator() => new EntryEnumerator(InnerList);
+
+        IEnumerator<object> IEnumerable<object>.GetEnumerator() => new EntryEnumerator(InnerList);
 
         /// <summary>
         ///  Adds an item to the combo box. For an unsorted combo box, the item is
@@ -400,6 +414,18 @@ public partial class ComboBox
             {
                 RemoveAt(index);
             }
+        }
+
+        bool ICollection<object>.Remove(object item)
+        {
+            int index = IndexOf(item);
+            if (index == -1)
+            {
+                return false;
+            }
+
+            RemoveAt(index);
+            return true;
         }
 
         internal void SetItemInternal(int index, object value)

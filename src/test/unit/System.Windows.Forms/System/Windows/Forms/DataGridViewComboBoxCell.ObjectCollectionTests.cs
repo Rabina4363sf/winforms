@@ -338,6 +338,18 @@ public class DataGridViewComboBoxCell_ObjectCollectionTests : IDisposable
         _collection[0].Should().Be(item2);
     }
 
+    [WinFormsFact]
+    public void ObjectCollection_GenericIList_UsesTypedMembers()
+    {
+        IList<object> collection = _collection;
+
+        collection.Add("Item");
+
+        collection.Should().ContainSingle().Which.Should().Be("Item");
+        collection.Remove("Item").Should().BeTrue();
+        collection.Remove("Item").Should().BeFalse();
+    }
+
     [WinFormsTheory]
     [InlineData(-1)]
     [InlineData(1)]

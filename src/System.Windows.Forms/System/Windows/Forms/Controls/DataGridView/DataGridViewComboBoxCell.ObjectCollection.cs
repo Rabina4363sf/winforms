@@ -12,7 +12,7 @@ public partial class DataGridViewComboBoxCell : DataGridViewCell
     ///  A collection that stores objects.
     /// </summary>
     [ListBindable(false)]
-    public class ObjectCollection : IList
+    public class ObjectCollection : IList, IList<object>
     {
         private readonly DataGridViewComboBoxCell _owner;
         private List<object>? _items;
@@ -43,6 +43,14 @@ public partial class DataGridViewComboBoxCell : DataGridViewCell
         bool IList.IsFixedSize => ((IList)InnerArray).IsFixedSize;
 
         public bool IsReadOnly => ((IList)InnerArray).IsReadOnly;
+
+        bool ICollection<object>.IsReadOnly => IsReadOnly;
+
+        object IList<object>.this[int index]
+        {
+            get => this[index]!;
+            set => this[index] = value;
+        }
 
         /// <summary>
         ///  Adds an item to the collection. For an unsorted combo box, the item is
@@ -82,6 +90,8 @@ public partial class DataGridViewComboBoxCell : DataGridViewCell
         }
 
         int IList.Add(object? item) => Add(item!);
+
+        void ICollection<object>.Add(object item) => Add(item);
 
         public void AddRange(params object[] items)
         {
@@ -188,8 +198,10 @@ public partial class DataGridViewComboBoxCell : DataGridViewCell
         /// <summary>
         ///  Copies the DataGridViewComboBoxCell Items collection to a destination array.
         /// </summary>
+#pragma warning disable CA1725 // The parameter name is part of the existing public API.
         public void CopyTo(object[] destination, int arrayIndex) =>
             ((ICollection)InnerArray).CopyTo(destination, arrayIndex);
+#pragma warning restore CA1725
 
         void ICollection.CopyTo(Array destination, int index) =>
             ((ICollection)InnerArray).CopyTo(destination, index);
@@ -198,6 +210,8 @@ public partial class DataGridViewComboBoxCell : DataGridViewCell
         ///  Returns an enumerator for the DataGridViewComboBoxCell Items collection.
         /// </summary>
         public IEnumerator GetEnumerator() => InnerArray.GetEnumerator();
+
+        IEnumerator<object> IEnumerable<object>.GetEnumerator() => InnerArray.GetEnumerator();
 
         public int IndexOf(object? value)
         {
@@ -246,6 +260,18 @@ public partial class DataGridViewComboBoxCell : DataGridViewCell
             {
                 RemoveAt(index);
             }
+        }
+
+        bool ICollection<object>.Remove(object item)
+        {
+            int index = IndexOf(item);
+            if (index == -1)
+            {
+                return false;
+            }
+
+            RemoveAt(index);
+            return true;
         }
 
         /// <summary>

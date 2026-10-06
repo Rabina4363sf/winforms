@@ -3,6 +3,7 @@
 
 #nullable disable
 
+using System.Collections;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 
@@ -10,16 +11,16 @@ namespace System.ComponentModel.Design.Tests;
 
 public class ExceptionCollectionTests
 {
-    public static IEnumerable<object[]> Ctor_List_TestData()
+    public static IEnumerable<object[]> Ctor_ArrayList_TestData()
     {
         yield return new object[] { null };
-        yield return new object[] { new List<Exception>() };
-        yield return new object[] { new List<Exception> { new InvalidOperationException(), new InvalidOperationException(), new InvalidOperationException() } };
+        yield return new object[] { new ArrayList() };
+        yield return new object[] { new ArrayList { new InvalidOperationException(), new InvalidOperationException(), new InvalidOperationException() } };
     }
 
     [Theory]
-    [MemberData(nameof(Ctor_List_TestData))]
-    public void ExceptionCollection_Ctor_List(List<Exception> exceptions)
+    [MemberData(nameof(Ctor_ArrayList_TestData))]
+    public void ExceptionCollection_Ctor_ArrayList(ArrayList exceptions)
     {
         ExceptionCollection collection = new(exceptions);
         if (exceptions is null)
@@ -28,20 +29,29 @@ public class ExceptionCollectionTests
         }
         else
         {
-            Assert.Equal(exceptions, collection.Exceptions);
+            Assert.Equal(exceptions.Cast<object>(), collection.Exceptions!.Cast<object>());
             Assert.NotSame(exceptions, collection.Exceptions);
-            Assert.Equal(collection.Exceptions, collection.Exceptions);
+            Assert.Equal(collection.Exceptions.Cast<object>(), collection.Exceptions.Cast<object>());
         }
     }
 
     [Fact]
-    public void ExceptionCollection_Ctor_WithExceptions()
+    public void ExceptionCollection_Ctor_List()
     {
         var exceptions = new List<Exception> { new InvalidOperationException() };
         ExceptionCollection collection = new(exceptions);
         Assert.NotNull(collection.Exceptions);
+        Assert.Equal(exceptions.Cast<object>(), collection.Exceptions!.Cast<object>());
+        Assert.NotSame(exceptions, collection.Exceptions);
         Assert.Single(collection.Exceptions);
         Assert.IsType<InvalidOperationException>(collection.Exceptions[0]);
+    }
+
+    [Fact]
+    public void ExceptionCollection_Ctor_ArrayList_ThrowsArgumentExceptionForNonExceptions()
+    {
+        ArrayList exceptions = [1, 2, 3];
+        Assert.Throws<ArgumentException>(() => new ExceptionCollection(exceptions));
     }
 
     [Theory]
@@ -51,7 +61,7 @@ public class ExceptionCollectionTests
         using BinaryFormatterScope formatterScope = new(enable: formatterEnabled);
         using MemoryStream stream = new();
         BinaryFormatter formatter = new();
-        ExceptionCollection collection = new(new List<Exception>());
+        ExceptionCollection collection = new(new ArrayList());
         if (formatterEnabled)
         {
             Assert.Throws<SerializationException>(() => formatter.Serialize(stream, collection));
@@ -65,7 +75,7 @@ public class ExceptionCollectionTests
     [Fact]
     public void ExceptionCollection_GetObjectData_ThrowsPlatformNotSupportedException()
     {
-        ExceptionCollection collection = new(new List<Exception>());
+        ExceptionCollection collection = new(new ArrayList());
         Assert.Throws<PlatformNotSupportedException>(() => collection.GetObjectData(null, default));
     }
 }

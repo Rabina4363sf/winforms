@@ -12,7 +12,7 @@ public partial class DomainUpDown
     ///  Encapsulates a collection of objects for use by the <see cref="DomainUpDown"/>
     ///  class.
     /// </summary>
-    public class DomainUpDownItemCollection : ArrayList
+    public class DomainUpDownItemCollection : ArrayList, IList<object>
     {
         private readonly DomainUpDown _owner;
 
@@ -107,5 +107,55 @@ public partial class DomainUpDown
                 _owner.SortDomainItems();
             }
         }
+
+        object IList<object>.this[int index]
+        {
+            get => this[index]!;
+            set => this[index] = value;
+        }
+
+        int ICollection<object>.Count => Count;
+
+        bool ICollection<object>.IsReadOnly => IsReadOnly;
+
+        void ICollection<object>.Add(object item) => Add(item);
+
+        void ICollection<object>.Clear() => Clear();
+
+        bool ICollection<object>.Contains(object item) => Contains(item);
+
+        void ICollection<object>.CopyTo(object[] array, int arrayIndex)
+        {
+            for (int i = 0; i < Count; i++)
+            {
+                array[arrayIndex + i] = this[i]!;
+            }
+        }
+
+        bool ICollection<object>.Remove(object item)
+        {
+            int index = IndexOf(item);
+            if (index < 0)
+            {
+                return false;
+            }
+
+            RemoveAt(index);
+            return true;
+        }
+
+        IEnumerator<object> IEnumerable<object>.GetEnumerator()
+        {
+            for (int i = 0; i < Count; i++)
+            {
+                yield return this[i]!;
+            }
+        }
+
+        int IList<object>.IndexOf(object item) => IndexOf(item);
+
+        void IList<object>.Insert(int index, object item) => Insert(index, item);
+
+        void IList<object>.RemoveAt(int index) => RemoveAt(index);
     }
 }

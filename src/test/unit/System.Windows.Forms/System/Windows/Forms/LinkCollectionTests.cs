@@ -125,4 +125,20 @@ public class LinkLabel_LinkCollectionTests : IDisposable
 
         _linkCollection.Contains(_link).Should().Be(expected);
     }
+
+    [WinFormsFact]
+    public void LinkCollection_GenericIList_SupportsCollectionOperations()
+    {
+        IList<Link> collection = _linkCollection;
+        Link link = _linkCollection.Add(1, 2);
+
+        collection.Contains(link).Should().BeTrue();
+        collection.IndexOf(link).Should().Be(0);
+        Link[] copy = new Link[1];
+        collection.CopyTo(copy, 0);
+        copy[0].Should().BeSameAs(link);
+
+        collection.Remove(link).Should().BeTrue();
+        collection.Should().BeEmpty();
+    }
 }

@@ -293,4 +293,21 @@ public class TableLayoutStyleCollectionTests
         collection.CopyTo(array, 1);
         Assert.Equal([1, style, 3], array);
     }
+
+    [WinFormsFact]
+    public void TableLayoutStyleCollection_GenericIList_SupportsCollectionOperations()
+    {
+        using ToolStrip toolStrip = new() { LayoutStyle = ToolStripLayoutStyle.Table };
+        TableLayoutSettings settings = Assert.IsType<TableLayoutSettings>(toolStrip.LayoutSettings);
+        IList<TableLayoutStyle> collection = settings.RowStyles;
+        RowStyle style = new();
+
+        collection.Add(style);
+        Assert.Same(style, collection[0]);
+        Assert.True(collection.Contains(style));
+        Assert.Equal(0, collection.IndexOf(style));
+
+        collection.Remove(style);
+        Assert.Empty(collection);
+    }
 }

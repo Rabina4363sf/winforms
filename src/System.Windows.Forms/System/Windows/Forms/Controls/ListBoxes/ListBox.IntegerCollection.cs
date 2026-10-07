@@ -8,7 +8,7 @@ namespace System.Windows.Forms;
 
 public partial class ListBox
 {
-    public partial class IntegerCollection : IList
+    public partial class IntegerCollection : IList, IList<int>
     {
         private readonly ListBox _owner;
         private int[]? _innerArray;
@@ -63,6 +63,8 @@ public partial class ListBox
             }
         }
 
+        bool ICollection<int>.IsReadOnly => false;
+
         public bool Contains(int item)
         {
             return IndexOf(item) != -1;
@@ -104,6 +106,52 @@ public partial class ListBox
 
             return index;
         }
+
+        void ICollection<int>.Add(int item) => Add(item);
+
+        void ICollection<int>.Clear() => Clear();
+
+        bool ICollection<int>.Contains(int item) => Contains(item);
+
+        void ICollection<int>.CopyTo(int[] array, int arrayIndex)
+        {
+            ArgumentNullException.ThrowIfNull(array);
+            ArgumentOutOfRangeException.ThrowIfNegative(arrayIndex);
+            if (array.Length - arrayIndex < _count)
+            {
+                throw new ArgumentException(null, nameof(array));
+            }
+
+            for (int i = 0; i < _count; i++)
+            {
+                array[arrayIndex + i] = _innerArray![i];
+            }
+        }
+
+        bool ICollection<int>.Remove(int item)
+        {
+            int index = IndexOf(item);
+            if (index < 0)
+            {
+                return false;
+            }
+
+            RemoveAt(index);
+            return true;
+        }
+
+        int IList<int>.this[int index]
+        {
+            get => this[index];
+            set => this[index] = value;
+        }
+
+        int IList<int>.IndexOf(int item) => IndexOf(item);
+
+        void IList<int>.Insert(int index, int item)
+            => throw new NotSupportedException(SR.ListBoxCantInsertIntoIntegerCollection);
+
+        void IList<int>.RemoveAt(int index) => RemoveAt(index);
 
         int IList.IndexOf(object? item)
         {
@@ -328,6 +376,14 @@ public partial class ListBox
         IEnumerator IEnumerable.GetEnumerator()
         {
             return new CustomTabOffsetsEnumerator(this);
+        }
+
+        IEnumerator<int> IEnumerable<int>.GetEnumerator()
+        {
+            for (int i = 0; i < _count; i++)
+            {
+                yield return _innerArray![i];
+            }
         }
     }
 }

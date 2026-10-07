@@ -2782,4 +2782,41 @@ public class ListBoxIntegerCollectionTests
         };
         Assert.Throws<ArgumentOutOfRangeException>("index", () => collection.RemoveAt(index));
     }
+
+    [WinFormsFact]
+    public void ListBoxIntegerCollection_IListGeneric_ImplementsExpectedOperations()
+    {
+        using ListBox owner = new();
+        IList<int> collection = new ListBox.IntegerCollection(owner);
+
+        collection.Add(3);
+        collection.Add(1);
+        collection.Add(2);
+
+        Assert.Equal(new[] { 1, 2, 3 }, collection);
+        Assert.True(collection.Contains(1));
+        Assert.Equal(0, collection.IndexOf(1));
+
+        int[] copied = new int[5];
+        collection.CopyTo(copied, 1);
+        Assert.Equal(new[] { 0, 1, 2, 3, 0 }, copied);
+
+        Assert.True(collection.Remove(1));
+        Assert.False(collection.Remove(4));
+        collection.RemoveAt(0);
+        Assert.Equal(new[] { 3 }, collection);
+
+        collection.Clear();
+        Assert.Empty(collection);
+        Assert.False(collection.IsReadOnly);
+    }
+
+    [WinFormsFact]
+    public void ListBoxIntegerCollection_IListGeneric_Insert_ThrowsNotSupportedException()
+    {
+        using ListBox owner = new();
+        IList<int> collection = new ListBox.IntegerCollection(owner);
+
+        Assert.Throws<NotSupportedException>(() => collection.Insert(0, 1));
+    }
 }

@@ -9,7 +9,7 @@ using System.Windows.Forms.Layout;
 namespace System.Windows.Forms;
 
 [Editor($"System.Windows.Forms.Design.StyleCollectionEditor, {Assemblies.SystemDesign}", typeof(UITypeEditor))]
-public abstract class TableLayoutStyleCollection : IList
+public abstract class TableLayoutStyleCollection : IList, IList<TableLayoutStyle>
 {
     private IArrangedElement? _owner;
     private readonly List<TableLayoutStyle> _innerList = [];
@@ -129,6 +129,42 @@ public abstract class TableLayoutStyleCollection : IList
     void ICollection.CopyTo(Array array, int startIndex) => ((ICollection)_innerList).CopyTo(array, startIndex);
 
     public int Count => _innerList.Count;
+
+    bool ICollection<TableLayoutStyle>.IsReadOnly => false;
+
+    TableLayoutStyle IList<TableLayoutStyle>.this[int index]
+    {
+        get => this[index];
+        set => ((IList)this)[index] = value;
+    }
+
+    void ICollection<TableLayoutStyle>.Add(TableLayoutStyle item) => Add(item);
+
+    void ICollection<TableLayoutStyle>.Clear() => Clear();
+
+    bool ICollection<TableLayoutStyle>.Contains(TableLayoutStyle item) => _innerList.Contains(item);
+
+    void ICollection<TableLayoutStyle>.CopyTo(TableLayoutStyle[] array, int arrayIndex)
+        => _innerList.CopyTo(array, arrayIndex);
+
+    bool ICollection<TableLayoutStyle>.Remove(TableLayoutStyle item)
+    {
+        if (!_innerList.Contains(item))
+        {
+            return false;
+        }
+
+        ((IList)this).Remove(item);
+        return true;
+    }
+
+    IEnumerator<TableLayoutStyle> IEnumerable<TableLayoutStyle>.GetEnumerator() => _innerList.GetEnumerator();
+
+    int IList<TableLayoutStyle>.IndexOf(TableLayoutStyle item) => _innerList.IndexOf(item);
+
+    void IList<TableLayoutStyle>.Insert(int index, TableLayoutStyle item) => ((IList)this).Insert(index, item);
+
+    void IList<TableLayoutStyle>.RemoveAt(int index) => RemoveAt(index);
 
     bool ICollection.IsSynchronized => ((ICollection)_innerList).IsSynchronized;
 

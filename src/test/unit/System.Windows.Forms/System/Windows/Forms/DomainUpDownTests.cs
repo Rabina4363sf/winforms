@@ -29,6 +29,29 @@ public class DomainUpDownTests : IDisposable
     }
 
     [WinFormsFact]
+    public void DomainUpDownItemCollection_GenericIList_SupportsCollectionOperations()
+    {
+        IList<object> collection = _control.Items;
+        object first = "first";
+        object second = "second";
+
+        collection.Add(first);
+        collection.Insert(0, second);
+
+        Assert.Equal(2, collection.Count);
+        Assert.Same(second, collection[0]);
+        Assert.True(collection.Contains(first));
+        Assert.Equal(1, collection.IndexOf(first));
+
+        object[] copy = new object[2];
+        collection.CopyTo(copy, 0);
+        Assert.Equal(second, copy[0]);
+        Assert.Equal(first, copy[1]);
+        Assert.True(collection.Remove(first));
+        Assert.False(collection.Contains(first));
+    }
+
+    [WinFormsFact]
     public void DomainUpDown_ModernVisualStylesMode_PreferredSizeIncludesButtonGroup()
     {
         using DomainUpDown control = new()

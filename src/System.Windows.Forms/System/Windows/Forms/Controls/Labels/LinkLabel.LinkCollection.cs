@@ -9,7 +9,7 @@ namespace System.Windows.Forms;
 
 public partial class LinkLabel
 {
-    public class LinkCollection : IList
+    public class LinkCollection : IList, IList<Link>
     {
         private readonly LinkLabel _owner;
 
@@ -95,6 +95,14 @@ public partial class LinkLabel
         bool IList.IsFixedSize => false;
 
         public bool IsReadOnly => false;
+
+        bool ICollection<Link>.IsReadOnly => IsReadOnly;
+
+        Link IList<Link>.this[int index]
+        {
+            get => this[index];
+            set => this[index] = value;
+        }
 
         public Link Add(int start, int length)
         {
@@ -319,6 +327,10 @@ public partial class LinkLabel
             ((ICollection)_owner._links).CopyTo(dest, index);
         }
 
+        void ICollection<Link>.CopyTo(Link[] array, int arrayIndex) => _owner._links.CopyTo(array, arrayIndex);
+
+        IEnumerator<Link> IEnumerable<Link>.GetEnumerator() => _owner._links.GetEnumerator();
+
         public IEnumerator GetEnumerator()
         {
             if (_owner._links is not null)
@@ -384,5 +396,26 @@ public partial class LinkLabel
                 Remove(link);
             }
         }
+
+        void ICollection<Link>.Add(Link item) => Add(item);
+
+        bool ICollection<Link>.Contains(Link item) => Contains(item);
+
+        int IList<Link>.IndexOf(Link item) => IndexOf(item);
+
+        void IList<Link>.Insert(int index, Link item) => Add(item);
+
+        bool ICollection<Link>.Remove(Link item)
+        {
+            if (item is null || item.Owner != _owner)
+            {
+                return false;
+            }
+
+            Remove(item);
+            return true;
+        }
+
+        void IList<Link>.RemoveAt(int index) => RemoveAt(index);
     }
 }

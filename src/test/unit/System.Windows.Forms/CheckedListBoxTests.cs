@@ -12,6 +12,18 @@ namespace System.Windows.Forms.Tests;
 public class CheckedListBoxTests
 {
     [WinFormsFact]
+    public void CheckedListBoxObjectCollection_GenericIList_InheritsListBoxImplementation()
+    {
+        using CheckedListBox box = new();
+        IList<object> collection = box.Items;
+
+        collection.Add("item");
+
+        Assert.Equal("item", collection[0]);
+        Assert.Equal(new object[] { "item" }, collection);
+    }
+
+    [WinFormsFact]
     public void CheckedListBox_Constructor()
     {
         using CheckedListBox box = new();

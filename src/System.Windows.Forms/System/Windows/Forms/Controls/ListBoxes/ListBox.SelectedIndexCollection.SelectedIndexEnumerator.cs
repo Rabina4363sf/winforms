@@ -13,7 +13,7 @@ public partial class ListBox
         ///  EntryEnumerator is an enumerator that will enumerate over
         ///  a given state mask.
         /// </summary>
-        private class SelectedIndexEnumerator : IEnumerator
+        private class SelectedIndexEnumerator : IEnumerator, IEnumerator<int>
         {
             private readonly SelectedIndexCollection _items;
             private int _current;
@@ -66,6 +66,12 @@ public partial class ListBox
 
                     return _items[_current];
                 }
+            }
+
+            int IEnumerator<int>.Current => _items[_current];
+
+            void IDisposable.Dispose()
+            {
             }
         }
     }

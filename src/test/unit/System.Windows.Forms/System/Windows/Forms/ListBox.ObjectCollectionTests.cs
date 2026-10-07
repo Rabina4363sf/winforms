@@ -10,6 +10,21 @@ namespace System.Windows.Forms.Tests;
 public class ListBoxObjectCollectionTests
 {
     [WinFormsFact]
+    public void ListBoxObjectCollection_GenericIList_UsesTypedMembers()
+    {
+        using ListBox owner = new();
+        IList<object> collection = owner.Items;
+
+        collection.Add("first");
+        collection.Add("second");
+
+        Assert.Equal(new object[] { "first", "second" }, collection);
+        Assert.Equal("first", collection[0]);
+        Assert.True(collection.Remove("first"));
+        Assert.Equal(new object[] { "second" }, collection);
+    }
+
+    [WinFormsFact]
     public void ListBoxObjectCollection_Ctor_ListBox()
     {
         using ListBox owner = new();

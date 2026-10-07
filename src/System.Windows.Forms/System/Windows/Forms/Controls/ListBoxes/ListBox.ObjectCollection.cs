@@ -15,7 +15,7 @@ public partial class ListBox
     ///  A collection that stores objects.
     /// </summary>
     [ListBindable(false)]
-    public class ObjectCollection : IList
+    public class ObjectCollection : IList, IList<object>
     {
         private readonly ListBox _owner;
         private ItemArray _items = null!;
@@ -65,6 +65,8 @@ public partial class ListBox
             }
         }
 
+        void ICollection<object>.CopyTo(object[] array, int arrayIndex) => CopyTo(array, arrayIndex);
+
         object ICollection.SyncRoot => this;
 
         bool ICollection.IsSynchronized => false;
@@ -72,6 +74,8 @@ public partial class ListBox
         bool IList.IsFixedSize => false;
 
         public bool IsReadOnly => false;
+
+        bool ICollection<object>.IsReadOnly => IsReadOnly;
 
         /// <summary>
         ///  Adds an item to the List box. For an unsorted List box, the item is
@@ -160,6 +164,8 @@ public partial class ListBox
 
         int IList.Add(object? item) => Add(item!);
 
+        void ICollection<object>.Add(object item) => Add(item);
+
         public void AddRange(ObjectCollection value)
         {
             ArgumentNullException.ThrowIfNull(value);
@@ -223,6 +229,12 @@ public partial class ListBox
         {
             get => this[index];
             set => this[index] = value!;
+        }
+
+        object IList<object>.this[int index]
+        {
+            get => this[index];
+            set => this[index] = value;
         }
 
         /// <summary>
@@ -294,6 +306,8 @@ public partial class ListBox
         ///  Returns an enumerator for the ListBox Items collection.
         /// </summary>
         public IEnumerator GetEnumerator() => InnerArray.GetEnumerator(0);
+
+        IEnumerator<object> IEnumerable<object>.GetEnumerator() => GetGenericEnumerator();
 
         public int IndexOf(object value)
         {
@@ -378,6 +392,26 @@ public partial class ListBox
         }
 
         void IList.Remove(object? value) => Remove(value!);
+
+        bool ICollection<object>.Remove(object item)
+        {
+            if (!Contains(item))
+            {
+                return false;
+            }
+
+            Remove(item);
+            return true;
+        }
+
+        private IEnumerator<object> GetGenericEnumerator()
+        {
+            IEnumerator enumerator = InnerArray.GetEnumerator(0);
+            while (enumerator.MoveNext())
+            {
+                yield return enumerator.Current!;
+            }
+        }
 
         /// <summary>
         ///  Removes an item from the ListBox at the given index.

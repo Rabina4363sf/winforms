@@ -8,7 +8,7 @@ namespace System.Windows.Forms;
 
 public partial class ListBox
 {
-    public partial class SelectedIndexCollection : IList
+    public partial class SelectedIndexCollection : IList, IList<int>
     {
         private readonly ListBox _owner;
 
@@ -61,6 +61,9 @@ public partial class ListBox
             }
         }
 
+        bool ICollection<int>.IsReadOnly => IsReadOnly;
+
+#pragma warning disable CA1725 // The parameter name is part of the existing public API.
         public bool Contains(int selectedIndex)
         {
             return IndexOf(selectedIndex) != -1;
@@ -93,6 +96,7 @@ public partial class ListBox
 
             return -1;
         }
+#pragma warning restore CA1725
 
         int IList.IndexOf(object? selectedIndex)
         {
@@ -111,6 +115,9 @@ public partial class ListBox
             throw new NotSupportedException(SR.ListBoxSelectedIndexCollectionIsReadOnly);
         }
 
+        void ICollection<int>.Add(int item)
+            => throw new NotSupportedException(SR.ListBoxSelectedIndexCollectionIsReadOnly);
+
         void IList.Clear()
         {
             throw new NotSupportedException(SR.ListBoxSelectedIndexCollectionIsReadOnly);
@@ -121,15 +128,24 @@ public partial class ListBox
             throw new NotSupportedException(SR.ListBoxSelectedIndexCollectionIsReadOnly);
         }
 
+        void IList<int>.Insert(int index, int item)
+            => throw new NotSupportedException(SR.ListBoxSelectedIndexCollectionIsReadOnly);
+
         void IList.Remove(object? value)
         {
             throw new NotSupportedException(SR.ListBoxSelectedIndexCollectionIsReadOnly);
         }
 
+        bool ICollection<int>.Remove(int item)
+            => throw new NotSupportedException(SR.ListBoxSelectedIndexCollectionIsReadOnly);
+
         void IList.RemoveAt(int index)
         {
             throw new NotSupportedException(SR.ListBoxSelectedIndexCollectionIsReadOnly);
         }
+
+        void IList<int>.RemoveAt(int index)
+            => throw new NotSupportedException(SR.ListBoxSelectedIndexCollectionIsReadOnly);
 
         /// <summary>
         ///  Retrieves the specified selected item.
@@ -155,6 +171,12 @@ public partial class ListBox
             }
         }
 
+        int IList<int>.this[int index]
+        {
+            get => this[index];
+            set => throw new NotSupportedException(SR.ListBoxSelectedIndexCollectionIsReadOnly);
+        }
+
         /// <summary>
         ///  This is the item array that stores our data. We share this backing store
         ///  with the main object collection.
@@ -174,6 +196,14 @@ public partial class ListBox
             for (int i = 0; i < cnt; i++)
             {
                 destination.SetValue(this[i], i + index);
+            }
+        }
+
+        void ICollection<int>.CopyTo(int[] array, int index)
+        {
+            for (int i = 0; i < Count; i++)
+            {
+                array[i + index] = this[i];
             }
         }
 
@@ -216,5 +246,7 @@ public partial class ListBox
         {
             return new SelectedIndexEnumerator(this);
         }
+
+        IEnumerator<int> IEnumerable<int>.GetEnumerator() => new SelectedIndexEnumerator(this);
     }
 }

@@ -9,7 +9,7 @@ namespace System.Windows.Forms;
 public partial class ListBox
 {
     // Should be "ObjectCollection", except we already have one of those.
-    public class SelectedObjectCollection : IList
+    public class SelectedObjectCollection : IList, IList<object>
     {
         // This is the bitmask used within ItemArray to identify selected objects.
         internal static int SelectedObjectMask { get; } = ItemArray.CreateMask();
@@ -139,6 +139,8 @@ public partial class ListBox
             }
         }
 
+        bool ICollection<object>.IsReadOnly => IsReadOnly;
+
         public bool Contains(object? selectedObject)
         {
             return IndexOf(selectedObject) != -1;
@@ -154,6 +156,9 @@ public partial class ListBox
             throw new NotSupportedException(SR.ListBoxSelectedObjectCollectionIsReadOnly);
         }
 
+        void ICollection<object>.Add(object item)
+            => throw new NotSupportedException(SR.ListBoxSelectedObjectCollectionIsReadOnly);
+
         void IList.Clear()
         {
             throw new NotSupportedException(SR.ListBoxSelectedObjectCollectionIsReadOnly);
@@ -164,15 +169,24 @@ public partial class ListBox
             throw new NotSupportedException(SR.ListBoxSelectedObjectCollectionIsReadOnly);
         }
 
+        void IList<object>.Insert(int index, object item)
+            => throw new NotSupportedException(SR.ListBoxSelectedObjectCollectionIsReadOnly);
+
         void IList.Remove(object? value)
         {
             throw new NotSupportedException(SR.ListBoxSelectedObjectCollectionIsReadOnly);
         }
 
+        bool ICollection<object>.Remove(object item)
+            => throw new NotSupportedException(SR.ListBoxSelectedObjectCollectionIsReadOnly);
+
         void IList.RemoveAt(int index)
         {
             throw new NotSupportedException(SR.ListBoxSelectedObjectCollectionIsReadOnly);
         }
+
+        void IList<object>.RemoveAt(int index)
+            => throw new NotSupportedException(SR.ListBoxSelectedObjectCollectionIsReadOnly);
 
         // A new internal method used in SelectedIndex getter...
         // For a Multi select ListBox there can be two items with the same name ...
@@ -201,6 +215,12 @@ public partial class ListBox
             }
         }
 
+        object IList<object>.this[int index]
+        {
+            get => this[index]!;
+            set => throw new NotSupportedException(SR.ListBoxSelectedObjectCollectionIsReadOnly);
+        }
+
         public void CopyTo(Array destination, int index)
         {
             int cnt = InnerArray.GetCount(SelectedObjectMask);
@@ -210,9 +230,28 @@ public partial class ListBox
             }
         }
 
+        void ICollection<object>.CopyTo(object[] array, int index)
+        {
+            for (int i = 0; i < Count; i++)
+            {
+                array[i + index] = this[i]!;
+            }
+        }
+
         public IEnumerator GetEnumerator()
         {
             return InnerArray.GetEnumerator(SelectedObjectMask);
+        }
+
+        IEnumerator<object> IEnumerable<object>.GetEnumerator() => GetGenericEnumerator();
+
+        private IEnumerator<object> GetGenericEnumerator()
+        {
+            IEnumerator enumerator = InnerArray.GetEnumerator(SelectedObjectMask);
+            while (enumerator.MoveNext())
+            {
+                yield return enumerator.Current!;
+            }
         }
 
         /// <summary>

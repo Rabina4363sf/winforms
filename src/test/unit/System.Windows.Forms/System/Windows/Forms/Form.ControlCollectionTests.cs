@@ -8,6 +8,21 @@ namespace System.Windows.Forms.Tests;
 public class Form_ControlCollection
 {
     [WinFormsFact]
+    public void ControlCollection_GenericIList_UsesTypedMembers()
+    {
+        using Form owner = new();
+        IList<Control> collection = owner.Controls;
+        using Button button = new();
+
+        collection.Add(button);
+
+        Assert.Same(button, collection[0]);
+        Assert.Same(button, collection.Single());
+        Assert.True(collection.Remove(button));
+        Assert.Empty(collection);
+    }
+
+    [WinFormsFact]
     public void ControlCollection_Ctor_Control()
     {
         using Form owner = new();

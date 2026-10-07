@@ -13,7 +13,7 @@ public partial class Control
     ///  Collection of controls...
     /// </summary>
     [ListBindable(false)]
-    public partial class ControlCollection : ArrangedElementCollection, IList, ICloneable
+    public partial class ControlCollection : ArrangedElementCollection, IList, IList<Control>, ICloneable
     {
         /// A caching mechanism for key accessor
         /// We use an index here rather than control so that we don't have lifetime
@@ -135,6 +135,14 @@ public partial class Control
             }
         }
 
+        void ICollection<Control>.Add(Control item) => Add(item);
+
+        Control IList<Control>.this[int index]
+        {
+            get => this[index];
+            set => throw new NotSupportedException();
+        }
+
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public virtual void AddRange(params Control[] controls)
         {
@@ -163,7 +171,9 @@ public partial class Control
             return ccOther;
         }
 
+#pragma warning disable CA1725 // The parameter name is part of the existing public API.
         public bool Contains(Control? control) => ((IList)InnerList).Contains(control);
+#pragma warning restore CA1725
 
         /// <summary>
         ///  Searches for Controls by their Name property, builds up an array
@@ -229,7 +239,12 @@ public partial class Control
             return new ControlCollectionEnumerator(this);
         }
 
+        IEnumerator<Control> IEnumerable<Control>.GetEnumerator()
+            => new ControlCollectionEnumerator(this);
+
+#pragma warning disable CA1725 // The parameter name is part of the existing public API.
         public int IndexOf(Control? control) => ((IList)InnerList).IndexOf(control);
+#pragma warning restore CA1725
 
         /// <summary>
         ///  The zero-based index of the first occurrence of value within the entire CollectionBase, if found; otherwise, -1.
@@ -316,6 +331,25 @@ public partial class Control
                 Remove(c);
             }
         }
+
+        bool ICollection<Control>.Remove(Control item)
+        {
+            if (!Contains(item))
+            {
+                return false;
+            }
+
+            Remove(item);
+            return true;
+        }
+
+        void IList<Control>.Insert(int index, Control item)
+            => throw new NotSupportedException();
+
+        void IList<Control>.RemoveAt(int index) => RemoveAt(index);
+
+        void ICollection<Control>.CopyTo(Control[] array, int index)
+            => InnerList.CopyTo(array, index);
 
         public void RemoveAt(int index)
         {

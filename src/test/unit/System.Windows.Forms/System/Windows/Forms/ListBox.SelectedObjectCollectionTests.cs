@@ -20,6 +20,17 @@ public class ListBoxSelectedObjectCollectionTests : IDisposable
         => _owner.Dispose();
 
     [Fact]
+    public void ListBoxSelectedObjectCollection_GenericIList_IsReadOnly()
+    {
+        IList<object> collection = _collection;
+
+        Assert.True(collection.IsReadOnly);
+        Assert.Throws<NotSupportedException>(() => collection.Add("item"));
+        Assert.Throws<NotSupportedException>(() => collection.Remove("item"));
+        Assert.Throws<NotSupportedException>(() => collection[0] = "item");
+    }
+
+    [Fact]
     public void ListBoxSelectedObjectCollection_Ctor_ListBox()
         => Assert.True(_collection.IsReadOnly);
 

@@ -8,6 +8,23 @@ namespace System.Windows.Forms.Tests;
 public class ListBoxSelectedIndexCollectionTests
 {
     [Fact]
+    public void ListBoxSelectedIndexCollection_GenericIList_IsReadOnly()
+    {
+        using ListBox owner = new()
+        {
+            Items = { "first", "second" },
+            SelectedIndices = { 1 }
+        };
+        IList<int> collection = owner.SelectedIndices;
+
+        Assert.True(collection.IsReadOnly);
+        Assert.Equal(new[] { 1 }, collection);
+        Assert.Throws<NotSupportedException>(() => collection.Add(0));
+        Assert.Throws<NotSupportedException>(() => collection.Remove(1));
+        Assert.Throws<NotSupportedException>(() => collection[0] = 0);
+    }
+
+    [Fact]
     public void ListBoxSelectedIndexCollection_Ctor_ListBox()
     {
         using ListBox owner = new();

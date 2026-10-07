@@ -12,7 +12,7 @@ public partial class Control
         // This is the same as ArraySubsetEnumerator
         // however since we're no longer an array, we've gotta employ a
         // special version of this.
-        private class ControlCollectionEnumerator : IEnumerator
+        private class ControlCollectionEnumerator : IEnumerator, IEnumerator<Control>
         {
             private readonly ControlCollection _controls;
             private int _current;
@@ -67,6 +67,12 @@ public partial class Control
                         return _controls[_current];
                     }
                 }
+            }
+
+            Control IEnumerator<Control>.Current => _controls[_current];
+
+            void IDisposable.Dispose()
+            {
             }
         }
     }

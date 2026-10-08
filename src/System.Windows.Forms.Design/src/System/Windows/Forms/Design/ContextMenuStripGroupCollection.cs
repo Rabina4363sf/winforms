@@ -9,7 +9,7 @@ internal class ContextMenuStripGroupCollection : Dictionary<string, ContextMenuS
     {
         get
         {
-            if (!TryGetValue(key, out ContextMenuStripGroup group))
+            if (!TryGetValue(key, out ContextMenuStripGroup? group))
             {
                 group = new ContextMenuStripGroup();
                 Add(key, group);

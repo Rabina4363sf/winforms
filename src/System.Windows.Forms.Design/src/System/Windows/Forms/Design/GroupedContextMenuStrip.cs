@@ -47,9 +47,9 @@ internal class GroupedContextMenuStrip : ContextMenuStrip
         Items.Clear();
         foreach (string? groupName in GroupOrdering)
         {
-            if (groupName is not null && _groups is not null && _groups.ContainsKey(groupName))
+            if (groupName is not null && _groups is not null && _groups.TryGetValue(groupName, out ContextMenuStripGroup? group))
             {
-                List<ToolStripItem> items = _groups[groupName].Items;
+                List<ToolStripItem> items = group.Items;
 
                 if (Items.Count > 0 && items.Count > 0)
                 {

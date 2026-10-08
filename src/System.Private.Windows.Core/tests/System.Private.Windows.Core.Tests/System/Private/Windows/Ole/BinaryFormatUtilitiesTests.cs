@@ -735,8 +735,8 @@ public sealed partial class BinaryFormatUtilitiesTests : BinaryFormatUtilitesTes
         TestData value = new(2);
 
         using ClipboardBinaryFormatterFullCompatScope scope = new();
-        RoundTripOfType(value, TestDataResolver, out TestDataBase? result).Should().BeTrue();
-        result.Should().BeOfType<TestData>().Subject.Equals(value);
+        RoundTripOfType(value, TestDataResolver, out TestData? result).Should().BeTrue();
+        result.Should().BeEquivalentTo(value);
 
         static Type TestDataResolver(TypeName typeName)
         {

@@ -294,6 +294,48 @@ public class AnchorLayoutTests : ControlTestBase
         }
     }
 
+    [WinFormsFact]
+    public void Maximized_FontChanged_RightBottomAnchoredControl_PreservesBounds()
+    {
+        using Form form = new()
+        {
+            AutoScaleMode = AutoScaleMode.Font,
+            ClientSize = new Size(800, 600)
+        };
+
+        using Button button = new()
+        {
+            Anchor = AnchorStyles.Right | AnchorStyles.Bottom,
+            Location = new Point(600, 400),
+            Size = new Size(100, 30),
+            MinimumSize = new Size(100, 30),
+            MaximumSize = new Size(100, 30)
+        };
+
+        form.Controls.Add(button);
+
+        Rectangle boundsBefore = default;
+        Rectangle boundsAfter = default;
+
+        form.WindowState = FormWindowState.Maximized;
+        form.Shown += OnFormShown;
+        form.ShowDialog();
+
+        Assert.Equal(boundsBefore, boundsAfter);
+
+        return;
+
+        void OnFormShown(object? sender, EventArgs e)
+        {
+            boundsBefore = button.Bounds;
+
+            form.Font = new Font(form.Font.FontFamily, form.Font.Size * 2);
+
+            boundsAfter = button.Bounds;
+            form.Close();
+        }
+    }
+
     private static void LaunchFormAndVerify(AnchorStyles anchors, int expectedX, int expectedY, int expectedWidth, int expectedHeight)
     {
         (Form form, Button button) = GetFormWithAnchoredButton(anchors);

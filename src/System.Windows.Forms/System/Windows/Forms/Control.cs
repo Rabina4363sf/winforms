@@ -10593,6 +10593,15 @@ public unsafe partial class Control :
         MinimumSize = Size.Empty;
         MaximumSize = Size.Empty;
 
+        bool parentUsesDefaultLayout = ParentInternal is { } parent && parent.LayoutEngine == DefaultLayout.Instance;
+
+        bool skipAnchorRescale = parentUsesDefaultLayout && FindForm() is { WindowState: FormWindowState.Maximized } && (Anchor & (AnchorStyles.Right | AnchorStyles.Bottom)) != 0;
+
+        if (skipAnchorRescale)
+        {
+            specified = BoundsSpecified.None;
+        }
+
         // This is raw because Min/Max size have been cleared at this point.
         Rectangle rawScaledBounds = GetScaledBounds(Bounds, factor, specified);
 
@@ -10634,22 +10643,26 @@ public unsafe partial class Control :
         // we should pull out the fixed things such as the border, scale the rest, then apply the fixed
         // adornment size.
         Size adornmentSize = adornments.Size;
-        if (!minSize.IsEmpty)
-        {
-            minSize -= adornmentSize;
-            minSize = ScaleSize(
-                LayoutUtils.UnionSizes(Size.Empty, minSize), // make sure we don't go below 0.
-                factor.Width,
-                factor.Height) + adornmentSize;
-        }
 
-        if (!maxSize.IsEmpty)
+        if (!skipAnchorRescale)
         {
-            maxSize -= adornmentSize;
-            maxSize = ScaleSize(
-                LayoutUtils.UnionSizes(Size.Empty, maxSize), // make sure we don't go below 0.
-                factor.Width,
-                factor.Height) + adornmentSize;
+            if (!minSize.IsEmpty)
+            {
+                minSize -= adornmentSize;
+                minSize = ScaleSize(
+                    LayoutUtils.UnionSizes(Size.Empty, minSize),
+                    factor.Width,
+                    factor.Height) + adornmentSize;
+            }
+
+            if (!maxSize.IsEmpty)
+            {
+                maxSize -= adornmentSize;
+                maxSize = ScaleSize(
+                    LayoutUtils.UnionSizes(Size.Empty, maxSize),
+                    factor.Width,
+                    factor.Height) + adornmentSize;
+            }
         }
 
         // Apply the min/max size constraints - don't call ApplySizeConstraints
@@ -10658,9 +10671,7 @@ public unsafe partial class Control :
         Size scaledSize = LayoutUtils.IntersectSizes(rawScaledBounds.Size, maximumSize);
         scaledSize = LayoutUtils.UnionSizes(scaledSize, minSize);
 
-        if (ScaleHelper.IsScalingRequirementMet
-            && ParentInternal is { } parent
-            && (parent.LayoutEngine == DefaultLayout.Instance))
+        if (ScaleHelper.IsScalingRequirementMet && parentUsesDefaultLayout && !skipAnchorRescale)
         {
             // We need to scale AnchorInfo to update distances to container edges
             DefaultLayout.ScaleAnchorInfo(this, factor);

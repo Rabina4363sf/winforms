@@ -1,0 +1,28 @@
+#nullable enable
+System.Windows.Forms.NonNullCollection<T>
+System.Windows.Forms.NonNullCollection<T>.Add(T! item) -> void
+System.Windows.Forms.NonNullCollection<T>.AddRange(System.Collections.Generic.IEnumerable<T!>! items) -> void
+System.Windows.Forms.NonNullCollection<T>.Clear() -> void
+System.Windows.Forms.NonNullCollection<T>.Contains(T! item) -> bool
+System.Windows.Forms.NonNullCollection<T>.CopyTo(T![]! array, int arrayIndex) -> void
+System.Windows.Forms.NonNullCollection<T>.Count.get -> int
+System.Windows.Forms.NonNullCollection<T>.GetEnumerator() -> System.Collections.Generic.IEnumerator<T!>!
+System.Windows.Forms.NonNullCollection<T>.IndexOf(T! item) -> int
+System.Windows.Forms.NonNullCollection<T>.Insert(int index, T! item) -> void
+System.Windows.Forms.NonNullCollection<T>.IsReadOnly.get -> bool
+System.Windows.Forms.NonNullCollection<T>.NonNullCollection() -> void
+System.Windows.Forms.NonNullCollection<T>.NonNullCollection(System.Collections.Generic.IEnumerable<T!>! items) -> void
+System.Windows.Forms.NonNullCollection<T>.Remove(T! item) -> bool
+System.Windows.Forms.NonNullCollection<T>.RemoveAt(int index) -> void
+System.Windows.Forms.NonNullCollection<T>.this[int index].get -> T!
+System.Windows.Forms.NonNullCollection<T>.this[int index].set -> void
+virtual System.Windows.Forms.NonNullCollection<T>.ItemAdded(T! item) -> void
+virtual System.Windows.Forms.NonNullCollection<T>.OnClear() -> void
+virtual System.Windows.Forms.NonNullCollection<T>.OnClearComplete() -> void
+virtual System.Windows.Forms.NonNullCollection<T>.OnInsert(int index, T! value) -> void
+virtual System.Windows.Forms.NonNullCollection<T>.OnInsertComplete(int index, T! value) -> void
+virtual System.Windows.Forms.NonNullCollection<T>.OnRemove(int index, T! value) -> void
+virtual System.Windows.Forms.NonNullCollection<T>.OnRemoveComplete(int index, T! value) -> void
+virtual System.Windows.Forms.NonNullCollection<T>.OnSet(int index, T! oldValue, T! newValue) -> void
+virtual System.Windows.Forms.NonNullCollection<T>.OnSetComplete(int index, T! oldValue, T! newValue) -> void
+virtual System.Windows.Forms.NonNullCollection<T>.OnValidate(T! value) -> void

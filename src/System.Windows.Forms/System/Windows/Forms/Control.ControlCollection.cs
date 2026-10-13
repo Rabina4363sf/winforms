@@ -349,7 +349,7 @@ public partial class Control
         void IList<Control>.RemoveAt(int index) => RemoveAt(index);
 
         void ICollection<Control>.CopyTo(Control[] array, int index)
-            => InnerList.CopyTo(array, index);
+            => ((ICollection)InnerList).CopyTo(array, index);
 
         public void RemoveAt(int index)
         {

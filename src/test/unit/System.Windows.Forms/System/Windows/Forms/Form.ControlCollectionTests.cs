@@ -18,6 +18,12 @@ public class Form_ControlCollection
 
         Assert.Same(button, collection[0]);
         Assert.Same(button, collection.Single());
+
+        Control[] copied = new Control[1];
+        collection.CopyTo(copied, 0);
+        Assert.Same(button, copied[0]);
+
+        Assert.Throws<NotSupportedException>(() => collection.Insert(0, button));
         Assert.True(collection.Remove(button));
         Assert.Empty(collection);
     }

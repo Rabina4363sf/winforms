@@ -2682,8 +2682,21 @@ public partial class TreeView : Control
         }
     }
 
+    /// <summary>
+    ///  Raises mouse-down events before native processing can enter a message loop or change the node layout.
+    /// </summary>
     private void WmMouseDown(ref Message m, MouseButtons button, int clicks)
     {
+        if (clicks == 2)
+        {
+            // Expanding a node can scroll the tree before the final mouse-up.
+            TVHITTESTINFO hitTest = new()
+            {
+                pt = PARAM.ToPoint(m.LParamInternal)
+            };
+            _mouseDownNode = PInvokeCore.SendMessage(this, PInvoke.TVM_HITTEST, 0, ref hitTest);
+        }
+
         // Required to put the TreeView in sane-state for painting proper highlighting of selectedNodes.
         // If the user shows the ContextMenu bu overriding the WndProc( ), then the treeView
         // goes into the weird state where the high-light gets locked to the node on which the ContextMenu was shown.
@@ -3340,7 +3353,11 @@ public partial class TreeView : Control
                         _treeViewState[TREEVIEWSTATE_doubleclickFired] = false;
                         if (!ValidationCancelled)
                         {
-                            OnNodeMouseDoubleClick(new TreeNodeMouseClickEventArgs(NodeFromHandle(hnode), _downButton, 2, point.X, point.Y));
+                            if (NodeFromHandle(_mouseDownNode) is { } doubleClickNode)
+                            {
+                                OnNodeMouseDoubleClick(new TreeNodeMouseClickEventArgs(doubleClickNode, _downButton, 2, point.X, point.Y));
+                            }
+
                             OnDoubleClick(new MouseEventArgs(_downButton, 2, point));
                             OnMouseDoubleClick(new MouseEventArgs(_downButton, 2, point));
                         }

@@ -6468,6 +6468,94 @@ public class TreeViewTests
         Assert.Equal(1, callCount);
     }
 
+    [WinFormsFact]
+    public void TreeView_NodeMouseDoubleClick_ExpandsNodeNearBottom_ReportsOriginalNode()
+    {
+        using TreeView control = new()
+        {
+            Size = new Size(240, 144),
+            ItemHeight = 20
+        };
+
+        for (int i = 1; i <= 30; i++)
+        {
+            TreeNode parent = control.Nodes.Add($"Parent {i}");
+            for (int j = 1; j <= 10; j++)
+            {
+                parent.Nodes.Add($"Child {i}-{j}");
+            }
+        }
+
+        control.CreateControl();
+        TreeNode node = control.Nodes[25];
+        control.SelectedNode = node;
+        control.TopNode = control.Nodes[20];
+        Point location = new(node.Bounds.Left + 1, node.Bounds.Top + node.Bounds.Height / 2);
+        Assert.Same(node, control.GetNodeAt(location));
+
+        PInvokeCore.PostMessage(control, PInvokeCore.WM_LBUTTONUP, 0, PARAM.FromPoint(location));
+        PInvokeCore.SendMessage(control, PInvokeCore.WM_LBUTTONDOWN, 1, PARAM.FromPoint(location));
+
+        TreeNodeMouseClickEventArgs doubleClick = null;
+        int callCount = 0;
+        control.NodeMouseDoubleClick += (sender, e) =>
+        {
+            doubleClick = e;
+            callCount++;
+        };
+
+        PInvokeCore.SendMessage(control, PInvokeCore.WM_LBUTTONDBLCLK, 0, PARAM.FromPoint(location));
+
+        Assert.True(node.IsExpanded);
+        Assert.NotSame(node, control.GetNodeAt(location));
+
+        PInvokeCore.SendMessage(control, PInvokeCore.WM_LBUTTONUP, 0, PARAM.FromPoint(location));
+
+        Assert.Equal(1, callCount);
+        Assert.Same(node, doubleClick.Node);
+        Assert.Same(node, control.SelectedNode);
+        Assert.Equal(MouseButtons.Left, doubleClick.Button);
+        Assert.Equal(2, doubleClick.Clicks);
+        Assert.Equal(location, doubleClick.Location);
+    }
+
+    [WinFormsTheory]
+    [InlineData(MouseButtons.Left)]
+    [InlineData(MouseButtons.Right)]
+    public void TreeView_NodeMouseDoubleClick_UnselectedNode_ReportsClickedNode(MouseButtons button)
+    {
+        using TreeView control = new();
+        TreeNode node = control.Nodes.Add("Clicked node");
+        TreeNode selectedNode = control.Nodes.Add("Selected node");
+        control.CreateControl();
+        control.SelectedNode = selectedNode;
+        Point location = new(node.Bounds.Left + 1, node.Bounds.Top + node.Bounds.Height / 2);
+
+        TreeNodeMouseClickEventArgs doubleClick = null;
+        int callCount = 0;
+        control.NodeMouseDoubleClick += (sender, e) =>
+        {
+            doubleClick = e;
+            callCount++;
+        };
+
+        uint doubleClickMessage = button == MouseButtons.Left
+            ? PInvokeCore.WM_LBUTTONDBLCLK
+            : PInvokeCore.WM_RBUTTONDBLCLK;
+        uint mouseUpMessage = button == MouseButtons.Left
+            ? PInvokeCore.WM_LBUTTONUP
+            : PInvokeCore.WM_RBUTTONUP;
+
+        PInvokeCore.SendMessage(control, doubleClickMessage, 0, PARAM.FromPoint(location));
+        PInvokeCore.SendMessage(control, mouseUpMessage, 0, PARAM.FromPoint(location));
+
+        Assert.Equal(1, callCount);
+        Assert.Same(node, doubleClick.Node);
+        Assert.Same(selectedNode, control.SelectedNode);
+        Assert.Equal(2, doubleClick.Clicks);
+        Assert.Equal(location, doubleClick.Location);
+    }
+
     public static IEnumerable<object[]> OnNodeMouseHover_TestData()
     {
         yield return new object[] { null };

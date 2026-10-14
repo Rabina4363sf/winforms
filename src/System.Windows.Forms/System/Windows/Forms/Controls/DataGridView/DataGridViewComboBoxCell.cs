@@ -1312,6 +1312,9 @@ public partial class DataGridViewComboBoxCell : DataGridViewCell
                 initialFormattedValueStr = string.Empty;
             }
 
+            // A blank cell must not retain the data source's selection and suppress autocomplete change notifications.
+            comboBox.SelectedIndex = -1;
+
             comboBox.Text = initialFormattedValueStr;
 
             if (!_flags.HasFlag(DataGridViewComboBoxCellFlags.DropDownHookedUp))

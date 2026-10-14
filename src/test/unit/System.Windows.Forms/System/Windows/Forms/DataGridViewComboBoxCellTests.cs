@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.ComponentModel;
+using System.Data;
 using System.Drawing;
 
 namespace System.Windows.Forms.Tests;
@@ -66,6 +67,109 @@ public class DataGridViewComboBoxCellTests : IDisposable
         _dataGridViewComboBoxCell.DataSource.Should().BeNull();
         _dataGridViewComboBoxCell.DisplayMember.Should().BeEmpty();
         _dataGridViewComboBoxCell.ValueMember.Should().BeEmpty();
+    }
+
+    [WinFormsTheory]
+    [InlineData(null, false, -1)]
+    [InlineData("", false, -1)]
+    [InlineData("apple", false, 0)]
+    [InlineData("bob", false, 1)]
+    [InlineData(null, true, 0)]
+    [InlineData("", true, 0)]
+    public void InitializeEditingControl_WithDataSource_SelectsFormattedValue(
+        string? value,
+        bool includeEmptyItem,
+        int expectedIndex)
+    {
+        using DataTable table = new();
+        table.Columns.Add("Text");
+        if (includeEmptyItem)
+        {
+            table.Rows.Add(string.Empty);
+        }
+
+        table.Rows.Add("apple");
+        table.Rows.Add("bob");
+
+        using DataGridView dataGridView = new() { BindingContext = new BindingContext() };
+        using DataGridViewComboBoxColumn column = new()
+        {
+            DataSource = table,
+            DisplayMember = "Text",
+            ValueMember = "Text"
+        };
+        dataGridView.Columns.Add(column);
+        dataGridView.Rows.Add();
+        DataGridViewCell cell = dataGridView.Rows[0].Cells[0];
+        cell.Value = value;
+        dataGridView.CurrentCell = cell;
+        var manager = (CurrencyManager)dataGridView.BindingContext[table];
+        manager.Position = table.Rows.Count - 1;
+
+        dataGridView.BeginEdit(false).Should().BeTrue();
+
+        var editor = (DataGridViewComboBoxEditingControl)dataGridView.EditingControl!;
+        editor.SelectedIndex.Should().Be(expectedIndex);
+        editor.Text.Should().Be(value ?? string.Empty);
+        manager.Position.Should().Be(expectedIndex == -1 ? table.Rows.Count - 1 : expectedIndex);
+        dataGridView.IsCurrentCellDirty.Should().BeFalse();
+        dataGridView.EndEdit().Should().BeTrue();
+        cell.Value.Should().Be(value);
+    }
+
+    [WinFormsFact]
+    public void InitializeEditingControl_RepeatedAutoComplete_CommitsBlankCells()
+    {
+        using Form form = new();
+        using DataGridView dataGridView = new() { AllowUserToAddRows = false };
+        using DataTable firstOptions = new();
+        using DataTable secondOptions = new();
+        using DataTable thirdOptions = new();
+        DataTable[] options = [firstOptions, secondOptions, thirdOptions];
+        form.Controls.Add(dataGridView);
+        foreach (DataTable table in options)
+        {
+            table.Columns.Add("Text");
+            table.Rows.Add("apple");
+            table.Rows.Add("bob");
+            table.Rows.Add("clobber");
+            dataGridView.Columns.Add(new DataGridViewComboBoxColumn
+            {
+                DataSource = table,
+                DisplayMember = "Text",
+                ValueMember = "Text"
+            });
+        }
+
+        dataGridView.Rows.Add(3);
+        form.Show();
+        dataGridView.Focus();
+
+        try
+        {
+            string[] expectedValues = ["apple", "bob", "clobber"];
+            for (int row = 0; row < 2; row++)
+            {
+                for (int column = 0; column < 3; column++)
+                {
+                    DataGridViewCell cell = dataGridView.CurrentCell!;
+                    dataGridView.BeginEdit(false).Should().BeTrue();
+                    var editor = (DataGridViewComboBoxEditingControl)dataGridView.EditingControl!;
+
+                    PInvokeCore.SendMessage(editor, PInvokeCore.WM_CHAR, (WPARAM)(uint)('a' + column));
+
+                    dataGridView.IsCurrentCellDirty.Should().BeTrue();
+                    bool moved = dataGridView.TestAccessor.Dynamic.ProcessDialogKey(Keys.Tab);
+                    moved.Should().BeTrue();
+                    cell.Value.Should().Be(expectedValues[column]);
+                }
+            }
+        }
+        finally
+        {
+            dataGridView.EndEdit();
+            form.Close();
+        }
     }
 
     [WinFormsFact]

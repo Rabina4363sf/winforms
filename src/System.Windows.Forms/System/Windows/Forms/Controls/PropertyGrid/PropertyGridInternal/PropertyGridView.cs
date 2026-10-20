@@ -4891,6 +4891,8 @@ internal sealed partial class PropertyGridView :
     {
         ArgumentNullException.ThrowIfNull(dialog);
 
+        GridEntry? entry = _selectedGridEntry;
+
         // Try to shift down if sitting right on top of existing owner.
         if (dialog.StartPosition == FormStartPosition.CenterScreen)
         {
@@ -4923,6 +4925,8 @@ internal sealed partial class PropertyGridView :
         {
             result = dialog.ShowDialog(this);
         }
+
+        entry?.EditorDialogResult = result;
 
         if (!priorFocus.IsNull)
         {

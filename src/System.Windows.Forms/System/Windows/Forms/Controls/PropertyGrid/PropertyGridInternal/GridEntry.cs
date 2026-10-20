@@ -62,8 +62,14 @@ internal abstract partial class GridEntry : GridItem, ITypeDescriptorContext
     private GridEntryAccessibleObject? _accessibleObject;
 
     private bool _lastPaintWithExplorerStyle;
+    private bool _valueChangedDuringEdit;
 
     private readonly Lock _lock = new();
+
+    /// <summary>
+    ///  Gets or sets the result of the dialog shown for the current property edit.
+    /// </summary>
+    internal DialogResult? EditorDialogResult { get; set; }
 
     private static Color InvertColor(Color color)
         => Color.FromArgb(color.A, (byte)~color.R, (byte)~color.G, (byte)~color.B);
@@ -1054,6 +1060,11 @@ internal abstract partial class GridEntry : GridItem, ITypeDescriptorContext
             return;
         }
 
+        bool previousValueChanged = _valueChangedDuringEdit;
+        DialogResult? previousDialogResult = EditorDialogResult;
+        _valueChangedDuringEdit = false;
+        EditorDialogResult = null;
+
         try
         {
             object? originalValue = PropertyValue;
@@ -1070,6 +1081,12 @@ internal abstract partial class GridEntry : GridItem, ITypeDescriptorContext
             if (value != originalValue && IsValueEditable)
             {
                 gridView.CommitValue(this, value);
+            }
+            else if (value == originalValue && _valueChangedDuringEdit && EditorDialogResult == DialogResult.OK)
+            {
+                // Editors can mutate a reference value without replacing it. Notify only after
+                // the dialog accepts the changes, without invoking the property's setter again.
+                OwnerGrid.OnPropertyValueSet(this, originalValue);
             }
 
             if (InternalExpanded && OwnerGridView is not null)
@@ -1105,6 +1122,11 @@ internal abstract partial class GridEntry : GridItem, ITypeDescriptorContext
                     MessageBoxDefaultButton.Button1,
                     0);
             }
+        }
+        finally
+        {
+            _valueChangedDuringEdit = previousValueChanged;
+            EditorDialogResult = previousDialogResult;
         }
     }
 
@@ -1956,6 +1978,12 @@ internal abstract partial class GridEntry : GridItem, ITypeDescriptorContext
         {
             return false;
         }
+    }
+
+    void ITypeDescriptorContext.OnComponentChanged()
+    {
+        OnComponentChanged();
+        _valueChangedDuringEdit = true;
     }
 
     public virtual void OnComponentChanged()

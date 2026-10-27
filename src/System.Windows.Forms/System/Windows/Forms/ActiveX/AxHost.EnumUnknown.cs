@@ -53,7 +53,7 @@ public abstract partial class AxHost
                 {
                     if (_array![_location] is not null)
                     {
-                        *rgelt = ComHelpers.GetComPointer<IUnknown>(_array[_location]);
+                        rgelt[fetched] = ComHelpers.GetComPointer<IUnknown>(_array[_location]);
                         ++fetched;
                     }
                 }

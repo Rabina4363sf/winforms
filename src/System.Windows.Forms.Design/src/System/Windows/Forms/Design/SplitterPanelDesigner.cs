@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.ComponentModel.Design;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Windows.Forms.Design.Behavior;
 
 namespace System.Windows.Forms.Design;
 
@@ -244,12 +245,12 @@ internal class SplitterPanelDesigner : PanelDesigner
     {
         get
         {
-            ArrayList? snapLines = null;
+            IList<SnapLine> snapLines = new List<SnapLine>(4);
 
             // We only want PaddingSnaplines for SplitterPanels.
             AddPaddingSnapLines(ref snapLines);
 
-            return snapLines;
+            return snapLines.Unwrap();
         }
     }
 

@@ -93,6 +93,7 @@ public partial class ComboBox : ListControl
     private string _currentText = string.Empty;
     private string? _lastTextChangedValue;
     private bool _dropDown;
+    private int _dropDownSelectedIndex = -1;
     private readonly AutoCompleteDropDownFinder _finder = new();
 
     private bool _selectedValueChangedFired;
@@ -1919,7 +1920,12 @@ public partial class ComboBox : ListControl
             // childwindow could be null if the handle was recreated while within a message handler
             // and then whoever recreated the handle allowed the message to continue to be processed
             // we cannot really be sure the new child will properly handle this window message, so we eat it.
+            bool wasDroppedDown = _dropDown;
             childWindow?.DefWndProc(ref m);
+            if (!wasDroppedDown && _dropDown && _dropDownSelectedIndex != SelectedIndex)
+            {
+                OnSelectedIndexChanged(EventArgs.Empty);
+            }
         }
     }
 
@@ -2690,6 +2696,11 @@ public partial class ComboBox : ListControl
     /// </summary>
     protected override void OnSelectedIndexChanged(EventArgs e)
     {
+        if (_dropDown)
+        {
+            _dropDownSelectedIndex = SelectedIndex;
+        }
+
         base.OnSelectedIndexChanged(e);
         ((EventHandler?)Events[s_selectedIndexChangedEvent])?.Invoke(this, e);
 
@@ -3688,6 +3699,7 @@ public partial class ComboBox : ListControl
                 break;
             case PInvoke.CBN_DROPDOWN:
                 _currentText = Text;
+                _dropDownSelectedIndex = SelectedIndex;
                 _dropDown = true;
                 OnDropDown(EventArgs.Empty);
                 UpdateDropDownHeight();
@@ -3756,6 +3768,7 @@ public partial class ComboBox : ListControl
     /// </summary>
     protected override unsafe void WndProc(ref Message m)
     {
+        bool wasDroppedDown = _dropDown;
         switch (m.MsgInternal)
         {
             // Modern VisualStyles: expand the client area to the full window so themed non-client
@@ -4189,6 +4202,12 @@ public partial class ComboBox : ListControl
 
                 base.WndProc(ref m);
                 break;
+        }
+
+        // Opening the native dropdown can select matching text without sending CBN_SELCHANGE.
+        if (!wasDroppedDown && _dropDown && _dropDownSelectedIndex != SelectedIndex)
+        {
+            OnSelectedIndexChanged(EventArgs.Empty);
         }
     }
 

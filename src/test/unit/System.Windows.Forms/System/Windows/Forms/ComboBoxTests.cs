@@ -4437,6 +4437,93 @@ public class ComboBoxTests
     }
 
     [WinFormsTheory]
+    [InlineData(AutoCompleteMode.None, false)]
+    [InlineData(AutoCompleteMode.None, true)]
+    [InlineData(AutoCompleteMode.SuggestAppend, false)]
+    [InlineData(AutoCompleteMode.SuggestAppend, true)]
+    public unsafe void ComboBox_DroppedDown_WithMatchingText_RaisesSelectedIndexChanged(AutoCompleteMode autoCompleteMode, bool useKeyboard)
+    {
+        using ComboBox comboBox = new()
+        {
+            AutoCompleteSource = AutoCompleteSource.ListItems,
+            AutoCompleteMode = autoCompleteMode
+        };
+        comboBox.Items.AddRange(["Apple", "Apricot", "Banana"]);
+        _ = comboBox.Handle;
+        comboBox.Text = "Ap";
+        Assert.Equal(-1, comboBox.SelectedIndex);
+
+        int callCount = 0;
+        comboBox.SelectedIndexChanged += (sender, e) =>
+        {
+            callCount++;
+            Assert.Equal(0, comboBox.SelectedIndex);
+        };
+
+        if (useKeyboard)
+        {
+            COMBOBOXINFO comboBoxInfo = new()
+            {
+                cbSize = (uint)sizeof(COMBOBOXINFO)
+            };
+            Assert.True(PInvoke.GetComboBoxInfo(comboBox.HWND, ref comboBoxInfo));
+            PInvokeCore.SendMessage(comboBoxInfo.hwndItem, PInvokeCore.WM_KEYDOWN, (WPARAM)(uint)Keys.F4);
+        }
+        else
+        {
+            comboBox.DroppedDown = true;
+        }
+
+        Assert.True(comboBox.DroppedDown);
+        Assert.Equal(0, comboBox.SelectedIndex);
+        Assert.Equal(1, callCount);
+
+        comboBox.DroppedDown = false;
+        comboBox.DroppedDown = true;
+        comboBox.DroppedDown = false;
+        Assert.Equal(1, callCount);
+    }
+
+    [WinFormsTheory]
+    [InlineData("")]
+    [InlineData("Missing")]
+    [InlineData("Apple")]
+    public void ComboBox_DroppedDown_WithUnchangedSelection_DoesNotRaiseSelectedIndexChanged(string text)
+    {
+        using ComboBox comboBox = new();
+        comboBox.Items.AddRange(["Apple", "Apricot", "Banana"]);
+        _ = comboBox.Handle;
+        comboBox.Text = text;
+        int selectedIndex = comboBox.SelectedIndex;
+        int callCount = 0;
+        comboBox.SelectedIndexChanged += (sender, e) => callCount++;
+
+        comboBox.DroppedDown = true;
+        comboBox.DroppedDown = false;
+
+        Assert.Equal(selectedIndex, comboBox.SelectedIndex);
+        Assert.Equal(0, callCount);
+    }
+
+    [WinFormsFact]
+    public void ComboBox_DroppedDown_WithSelectionChangedInDropDownHandler_DoesNotRaiseDuplicateSelectedIndexChanged()
+    {
+        using ComboBox comboBox = new();
+        comboBox.Items.AddRange(["Apple", "Apricot", "Banana"]);
+        _ = comboBox.Handle;
+        comboBox.Text = "Ap";
+        int callCount = 0;
+        comboBox.SelectedIndexChanged += (sender, e) => callCount++;
+        comboBox.DropDown += (sender, e) => comboBox.SelectedIndex = 2;
+
+        comboBox.DroppedDown = true;
+        comboBox.DroppedDown = false;
+
+        Assert.Equal(2, comboBox.SelectedIndex);
+        Assert.Equal(1, callCount);
+    }
+
+    [WinFormsTheory]
     [InlineData("item0", 0, 0, false)]
     [InlineData("item1", 0, 1, false)]
     [InlineData("item1", 1, 1, false)]

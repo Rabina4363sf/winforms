@@ -294,9 +294,14 @@ public class AnchorLayoutTests : ControlTestBase
         }
     }
 
-    [WinFormsFact]
-    public void Maximized_FontChanged_RightBottomAnchoredControl_PreservesBounds()
+    [WinFormsTheory]
+    [InlineData(false, 0.5f)]
+    [InlineData(true, 0.5f)]
+    [InlineData(false, 2f)]
+    [InlineData(true, 2f)]
+    public void Maximized_FontChanged_RightBottomAnchoredControl_ScalesAnchorDistancesAndSize(bool useAnchorLayoutV2, float fontScale)
     {
+        using AnchorLayoutV2Scope scope = new(enable: useAnchorLayoutV2);
         using Form form = new()
         {
             AutoScaleMode = AutoScaleMode.Font,
@@ -314,26 +319,234 @@ public class AnchorLayoutTests : ControlTestBase
 
         form.Controls.Add(button);
 
+        using Font scaledFont = new(form.Font.FontFamily, form.Font.Size * fontScale);
         Rectangle boundsBefore = default;
-        Rectangle boundsAfter = default;
+        Rectangle displayRectangleBefore = default;
+        Size clientSizeBefore = default;
+        SizeF scaleFactor = default;
 
         form.WindowState = FormWindowState.Maximized;
         form.Shown += OnFormShown;
         form.ShowDialog();
 
-        Assert.Equal(boundsBefore, boundsAfter);
+        Assert.Equal(clientSizeBefore, form.ClientSize);
+        AssertScaledAnchorDistances(button, boundsBefore, displayRectangleBefore, scaleFactor);
+        Size expectedSize = new(
+            (int)Math.Round(boundsBefore.Width * scaleFactor.Width),
+            (int)Math.Round(boundsBefore.Height * scaleFactor.Height));
+        Assert.Equal(expectedSize, button.Size);
+        Assert.Equal(expectedSize, button.MinimumSize);
+        Assert.Equal(expectedSize, button.MaximumSize);
 
         return;
 
         void OnFormShown(object? sender, EventArgs e)
         {
             boundsBefore = button.Bounds;
+            displayRectangleBefore = form.DisplayRectangle;
+            clientSizeBefore = form.ClientSize;
+            SizeF dimensionsBefore = form.AutoScaleDimensions;
 
-            form.Font = new Font(form.Font.FontFamily, form.Font.Size * 2);
+            form.Font = scaledFont;
 
-            boundsAfter = button.Bounds;
+            scaleFactor = new SizeF(
+                form.AutoScaleDimensions.Width / dimensionsBefore.Width,
+                form.AutoScaleDimensions.Height / dimensionsBefore.Height);
             form.Close();
         }
+    }
+
+    [WinFormsTheory]
+    [InlineData(false, 0.5f, false, DockStyle.None)]
+    [InlineData(true, 0.5f, false, DockStyle.None)]
+    [InlineData(false, 2f, false, DockStyle.None)]
+    [InlineData(true, 2f, false, DockStyle.None)]
+    [InlineData(false, 0.5f, true, DockStyle.None)]
+    [InlineData(true, 0.5f, true, DockStyle.None)]
+    [InlineData(false, 2f, true, DockStyle.None)]
+    [InlineData(true, 2f, true, DockStyle.None)]
+    [InlineData(false, 0.5f, false, DockStyle.Fill)]
+    [InlineData(true, 0.5f, false, DockStyle.Fill)]
+    [InlineData(false, 2f, false, DockStyle.Fill)]
+    [InlineData(true, 2f, false, DockStyle.Fill)]
+    public void Maximized_FontChanged_NestedAnchoredControl_ScalesAnchorDistances(
+        bool useAnchorLayoutV2,
+        float fontScale,
+        bool useContainerControl,
+        DockStyle dock)
+    {
+        using AnchorLayoutV2Scope scope = new(enable: useAnchorLayoutV2);
+        using Form form = new()
+        {
+            AutoScaleMode = AutoScaleMode.Font,
+            ClientSize = new Size(652, 375)
+        };
+        using Control panel = useContainerControl ? new UserControl() : new Panel();
+        panel.Anchor = AnchorAllDirection;
+        panel.Bounds = new Rectangle(12, 72, 615, 164);
+        panel.Dock = dock;
+        using Panel footer = new()
+        {
+            Dock = DockStyle.Bottom,
+            Height = 115
+        };
+        using Button button = new()
+        {
+            Anchor = AnchorStyles.Right | AnchorStyles.Bottom,
+            Bounds = new Rectangle(495, 114, 100, 30)
+        };
+        panel.Controls.Add(button);
+        form.Controls.Add(panel);
+        form.Controls.Add(footer);
+
+        using Font scaledFont = new(form.Font.FontFamily, form.Font.Size * fontScale);
+        Rectangle panelBoundsBefore = default;
+        Rectangle buttonBoundsBefore = default;
+        Rectangle formDisplayRectangleBefore = default;
+        Rectangle panelDisplayRectangleBefore = default;
+        Size clientSizeBefore = default;
+        int footerHeightBefore = 0;
+        SizeF scaleFactor = default;
+
+        form.WindowState = FormWindowState.Maximized;
+        form.Shown += OnFormShown;
+        form.ShowDialog();
+
+        Assert.Equal(clientSizeBefore, form.ClientSize);
+        AssertScaledAnchorDistances(panel, panelBoundsBefore, formDisplayRectangleBefore, scaleFactor);
+        AssertScaledAnchorDistances(button, buttonBoundsBefore, panelDisplayRectangleBefore, scaleFactor);
+        Assert.Equal(form.DisplayRectangle.Bottom, footer.Bottom);
+        Assert.Equal(form.DisplayRectangle.Width, footer.Width);
+        Assert.Equal((int)Math.Round(footerHeightBefore * scaleFactor.Height), footer.Height);
+
+        return;
+
+        void OnFormShown(object? sender, EventArgs e)
+        {
+            panelBoundsBefore = panel.Bounds;
+            buttonBoundsBefore = button.Bounds;
+            formDisplayRectangleBefore = form.DisplayRectangle;
+            panelDisplayRectangleBefore = panel.DisplayRectangle;
+            clientSizeBefore = form.ClientSize;
+            footerHeightBefore = footer.Height;
+            SizeF dimensionsBefore = form.AutoScaleDimensions;
+
+            form.Font = scaledFont;
+
+            scaleFactor = new SizeF(
+                form.AutoScaleDimensions.Width / dimensionsBefore.Width,
+                form.AutoScaleDimensions.Height / dimensionsBefore.Height);
+            form.Close();
+        }
+    }
+
+    [WinFormsTheory]
+    [InlineData(false, FormWindowState.Normal, 0.5f)]
+    [InlineData(true, FormWindowState.Normal, 0.5f)]
+    [InlineData(false, FormWindowState.Maximized, 0.5f)]
+    [InlineData(true, FormWindowState.Maximized, 0.5f)]
+    [InlineData(false, FormWindowState.Normal, 2f)]
+    [InlineData(true, FormWindowState.Normal, 2f)]
+    [InlineData(false, FormWindowState.Maximized, 2f)]
+    [InlineData(true, FormWindowState.Maximized, 2f)]
+    [InlineData(false, FormWindowState.Normal, 1f)]
+    [InlineData(true, FormWindowState.Normal, 1f)]
+    [InlineData(false, FormWindowState.Maximized, 1f)]
+    [InlineData(true, FormWindowState.Maximized, 1f)]
+    public void Minimized_FontChanged_RestoredControls_ScaleAnchorDistances(
+        bool useAnchorLayoutV2,
+        FormWindowState restoreState,
+        float fontScale)
+    {
+        using AnchorLayoutV2Scope scope = new(enable: useAnchorLayoutV2);
+        using Form form = new()
+        {
+            AutoScaleMode = AutoScaleMode.Font,
+            ClientSize = new Size(400, 260),
+            StartPosition = FormStartPosition.Manual,
+            Location = Point.Empty,
+            WindowState = restoreState
+        };
+        using Panel panel = new()
+        {
+            Anchor = AnchorAllDirection,
+            Bounds = new Rectangle(12, 50, 365, 150)
+        };
+        using Panel footer = new()
+        {
+            Dock = DockStyle.Bottom,
+            Height = 60
+        };
+        using Button button = new()
+        {
+            Anchor = AnchorStyles.Right | AnchorStyles.Bottom,
+            Bounds = new Rectangle(265, 100, 80, 25)
+        };
+        panel.Controls.Add(button);
+        form.Controls.Add(panel);
+        form.Controls.Add(footer);
+        using Font scaledFont = new(form.Font.FontFamily, form.Font.Size * fontScale);
+        Task? testTask = null;
+        form.Shown += (_, _) => testTask = VerifyRestoredLayoutAsync();
+        form.ShowDialog();
+
+        Assert.NotNull(testTask);
+        Assert.True(testTask.IsCompletedSuccessfully, testTask.Exception?.ToString());
+
+        return;
+
+        async Task VerifyRestoredLayoutAsync()
+        {
+            try
+            {
+                await WaitForIdleAsync();
+                Rectangle panelBoundsBefore = panel.Bounds;
+                Rectangle buttonBoundsBefore = button.Bounds;
+                Rectangle formDisplayRectangleBefore = form.DisplayRectangle;
+                Rectangle panelDisplayRectangleBefore = panel.DisplayRectangle;
+                int footerHeightBefore = footer.Height;
+                SizeF dimensionsBefore = form.AutoScaleDimensions;
+
+                form.WindowState = FormWindowState.Minimized;
+                await WaitForIdleAsync();
+                Assert.Equal(Size.Empty, form.ClientSize);
+
+                form.Font = scaledFont;
+                SizeF scaleFactor = new(
+                    form.AutoScaleDimensions.Width / dimensionsBefore.Width,
+                    form.AutoScaleDimensions.Height / dimensionsBefore.Height);
+
+                form.WindowState = restoreState;
+                await WaitForIdleAsync();
+
+                Assert.Equal(restoreState, form.WindowState);
+                AssertScaledAnchorDistances(panel, panelBoundsBefore, formDisplayRectangleBefore, scaleFactor);
+                AssertScaledAnchorDistances(button, buttonBoundsBefore, panelDisplayRectangleBefore, scaleFactor, tolerance: 1);
+                Assert.Equal((int)Math.Round(panelBoundsBefore.X * scaleFactor.Width), panel.Left);
+                Assert.Equal((int)Math.Round(panelBoundsBefore.Y * scaleFactor.Height), panel.Top);
+                Assert.Equal(form.DisplayRectangle.Bottom, footer.Bottom);
+                Assert.Equal(form.DisplayRectangle.Width, footer.Width);
+                Assert.Equal((int)Math.Round(footerHeightBefore * scaleFactor.Height), footer.Height);
+            }
+            finally
+            {
+                form.Close();
+            }
+        }
+    }
+
+    private static void AssertScaledAnchorDistances(
+        Control control,
+        Rectangle boundsBefore,
+        Rectangle displayRectangleBefore,
+        SizeF scaleFactor,
+        int tolerance = 0)
+    {
+        Rectangle displayRectangle = control.Parent!.DisplayRectangle;
+        int expectedRight = (int)Math.Round((displayRectangleBefore.Right - boundsBefore.Right) * scaleFactor.Width);
+        int expectedBottom = (int)Math.Round((displayRectangleBefore.Bottom - boundsBefore.Bottom) * scaleFactor.Height);
+        Assert.InRange(displayRectangle.Right - control.Right, expectedRight - tolerance, expectedRight + tolerance);
+        Assert.InRange(displayRectangle.Bottom - control.Bottom, expectedBottom - tolerance, expectedBottom + tolerance);
     }
 
     private static void LaunchFormAndVerify(AnchorStyles anchors, int expectedX, int expectedY, int expectedWidth, int expectedHeight)

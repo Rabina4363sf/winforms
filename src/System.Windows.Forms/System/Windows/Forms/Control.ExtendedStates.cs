@@ -68,6 +68,8 @@ public partial class Control
         /// <summary>
         ///  If set, the control is being scaled currently
         /// </summary>
-        CurrentlyBeingScaled = 0x00002000
+        CurrentlyBeingScaled = 0x00002000,
+
+        ScalingForFont = 0x00004000
     }
 }

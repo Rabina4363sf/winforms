@@ -73,6 +73,8 @@ public class ContainerControl : ScrollableControl, IContainerControl
 
     private static readonly int s_propAxContainer = PropertyStore.CreateKey();
 
+    private static readonly int s_fontScalingDisplayRectanglesProperty = PropertyStore.CreateKey();
+
     private const string FontMeasureString = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
     /// <summary>
@@ -849,33 +851,94 @@ public class ContainerControl : ScrollableControl, IContainerControl
     [EditorBrowsable(EditorBrowsableState.Advanced)]
     protected override void OnFontChanged(EventArgs e)
     {
-        // Font may be updated for container controls that are set
-        // to scale in Dpi mode (during WM_DPICHANGED event).
-        // This may require scaling/relayout of the form. AutoScaleFactor will take
-        // AutoScaleMode into account while scaling the controls.
-        if (AutoScaleMode != AutoScaleMode.None && IsHandleCreated)
+        bool trackDisplayRectangles = this is Form { WindowState: FormWindowState.Maximized }
+            && AutoScaleMode == AutoScaleMode.Font
+            && IsHandleCreated
+            && !RequiredScalingEnabled
+            && !DesignMode
+            && !_isScaledByDpiChangedEvent
+            && LayoutEngine == DefaultLayout.Instance;
+
+        Dictionary<Control, Rectangle>? previousDisplayRectangles =
+            Properties.GetValueOrDefault<Dictionary<Control, Rectangle>>(s_fontScalingDisplayRectanglesProperty);
+
+        if (trackDisplayRectangles)
         {
-            _currentAutoScaleDimensions = SizeF.Empty;
+            // Descendants are scaled after their parents have already changed size.
+            Dictionary<Control, Rectangle> displayRectangles = new(ReferenceEqualityComparer.Instance);
+            CaptureDisplayRectangles(this, displayRectangles);
+            Properties.AddValue(s_fontScalingDisplayRectanglesProperty, displayRectangles);
+        }
 
-            // If the font changes and we are going to autoscale
-            // as a result, do it now, and wrap the entire
-            // transaction in a suspend layout to prevent
-            // the layout engines from conflicting with our
-            // work.
-            SuspendAllLayout(this);
-
-            try
+        try
+        {
+            // Font may be updated for container controls that are set
+            // to scale in Dpi mode (during WM_DPICHANGED event).
+            // This may require scaling/relayout of the form. AutoScaleFactor will take
+            // AutoScaleMode into account while scaling the controls.
+            if (AutoScaleMode != AutoScaleMode.None && IsHandleCreated)
             {
-                // Parameter 'causedByFontChanged' helps to differentiate the scaling between ResumeLayout and FontChanged event.
-                PerformAutoScale(!RequiredScalingEnabled, excludedBounds: true, causedByFontChanged: true);
+                _currentAutoScaleDimensions = SizeF.Empty;
+
+                // If the font changes and we are going to autoscale
+                // as a result, do it now, and wrap the entire
+                // transaction in a suspend layout to prevent
+                // the layout engines from conflicting with our
+                // work.
+                SuspendAllLayout(this);
+
+                try
+                {
+                    // Parameter 'causedByFontChanged' helps to differentiate the scaling between ResumeLayout and FontChanged event.
+                    PerformAutoScale(!RequiredScalingEnabled, excludedBounds: true, causedByFontChanged: true);
+                }
+                finally
+                {
+                    ResumeAllLayout(this, performLayout: false);
+                }
             }
-            finally
+
+            base.OnFontChanged(e);
+        }
+        finally
+        {
+            if (trackDisplayRectangles)
             {
-                ResumeAllLayout(this, performLayout: false);
+                if (previousDisplayRectangles is not null)
+                {
+                    Properties.AddValue(s_fontScalingDisplayRectanglesProperty, previousDisplayRectangles);
+                }
+                else
+                {
+                    Properties.RemoveValue(s_fontScalingDisplayRectanglesProperty);
+                }
             }
         }
 
-        base.OnFontChanged(e);
+        static void CaptureDisplayRectangles(Control control, Dictionary<Control, Rectangle> displayRectangles)
+        {
+            if (control.ChildControls is not { Count: > 0 } children)
+            {
+                return;
+            }
+
+            displayRectangles.Add(control, control.DisplayRectangle);
+            for (int i = 0; i < children.Count; i++)
+            {
+                CaptureDisplayRectangles(children[i], displayRectangles);
+            }
+        }
+    }
+
+    internal bool TryGetFontScalingDisplayRectangle(Control container, out Rectangle displayRectangle)
+    {
+        displayRectangle = default;
+
+        return !_isScaledByDpiChangedEvent
+            && Properties.TryGetValue(
+                s_fontScalingDisplayRectanglesProperty,
+                out Dictionary<Control, Rectangle>? displayRectangles)
+            && displayRectangles.TryGetValue(container, out displayRectangle);
     }
 
     /// <summary>
@@ -1126,7 +1189,7 @@ public class ContainerControl : ScrollableControl, IContainerControl
                 // Top-level window may be already scaled by WM_DPICHANGE message. So, we skip it in such case.
                 if (!_isScaledByDpiChangedEvent)
                 {
-                    ScaleControl(includedFactor, ourExternalContainerFactor);
+                    ScaleControl(includedFactor, ourExternalContainerFactor, causedByFontChanged);
                 }
 
                 if (!_doNotScaleChildren)

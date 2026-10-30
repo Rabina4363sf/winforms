@@ -752,6 +752,9 @@ internal partial class DefaultLayout : LayoutEngine
         Rectangle parentDisplayRect = element.Container.DisplayRectangle;
         int parentWidth = parentDisplayRect.Width;
         int parentHeight = parentDisplayRect.Height;
+        // A minimized form's empty display rectangle is not a new anchor baseline.
+        bool preserveAnchorDistances = ScaleHelper.IsScalingRequirementMet
+            || element.Container is Form { WindowState: FormWindowState.Minimized };
 
         // The anchors is relative to the parent DisplayRectangle, so offset the anchors
         // by the DisplayRect origin
@@ -763,7 +766,7 @@ internal partial class DefaultLayout : LayoutEngine
         AnchorStyles anchor = GetAnchor(element);
         if (IsAnchored(anchor, AnchorStyles.Right))
         {
-            if (ScaleHelper.IsScalingRequirementMet && (anchorInfo.Right - parentWidth > 0) && (oldAnchorInfo.Right < 0))
+            if (preserveAnchorDistances && (anchorInfo.Right - parentWidth > 0) && (oldAnchorInfo.Right < 0))
             {
                 // Parent was resized to fit its parent, or screen, we need to reuse old anchors info to prevent losing control beyond right edge.
                 anchorInfo.Right = oldAnchorInfo.Right;
@@ -791,7 +794,7 @@ internal partial class DefaultLayout : LayoutEngine
 
         if (IsAnchored(anchor, AnchorStyles.Bottom))
         {
-            if (ScaleHelper.IsScalingRequirementMet && (anchorInfo.Bottom - parentHeight > 0) && (oldAnchorInfo.Bottom < 0))
+            if (preserveAnchorDistances && (anchorInfo.Bottom - parentHeight > 0) && (oldAnchorInfo.Bottom < 0))
             {
                 // The parent was resized to fit its parent or the screen, we need to reuse the old anchors info
                 // to prevent positioning the control beyond the bottom edge.
@@ -987,7 +990,9 @@ internal partial class DefaultLayout : LayoutEngine
             double heightFactor = factor.Height;
             double widthFactor = factor.Width;
 
-            if (UseAnchorLayoutV2(element))
+            // Minimized forms have no client area; use the supplied scale factor until they are restored.
+            if (UseAnchorLayoutV2(element)
+                && element.Container is not Form { WindowState: FormWindowState.Minimized })
             {
                 // AutoScaleFactor is not aligned with Window's SuggestedRectangle applied on top-level window/Form.
                 // So, compute factor with respect to the change in DisplayRectangle and apply it to scale anchors.

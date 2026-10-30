@@ -10452,7 +10452,7 @@ public unsafe partial class Control :
         // positions of all controls. Therefore, we should resume(false).
         using (new LayoutTransaction(this, this, PropertyNames.Bounds, false))
         {
-            ScaleControl(includedFactor, excludedFactor);
+            ScaleControl(includedFactor, excludedFactor, causedByFontChanged);
 
             // Certain controls like 'PropertyGrid' does special scaling. Differing scaling to their own methods.
             if (!_doNotScaleChildren)
@@ -10531,11 +10531,13 @@ public unsafe partial class Control :
     ///  The requestingControl property indicates which control has requested
     ///  the scaling function.
     /// </summary>
-    internal void ScaleControl(SizeF includedFactor, SizeF excludedFactor)
+    internal void ScaleControl(SizeF includedFactor, SizeF excludedFactor, bool causedByFontChanged = false)
     {
+        bool wasScalingForFont = GetExtendedState(ExtendedStates.ScalingForFont);
         try
         {
             ScalingInProgress = true;
+            SetExtendedState(ExtendedStates.ScalingForFont, causedByFontChanged);
 
             BoundsSpecified includedSpecified = BoundsSpecified.None;
             BoundsSpecified excludedSpecified = BoundsSpecified.None;
@@ -10567,6 +10569,7 @@ public unsafe partial class Control :
         }
         finally
         {
+            SetExtendedState(ExtendedStates.ScalingForFont, wasScalingForFont);
             ScalingInProgress = false;
         }
     }
@@ -10588,19 +10591,11 @@ public unsafe partial class Control :
         AdjustWindowRectExForControlDpi(ref adornments, (WINDOW_STYLE)cp.Style, false, (WINDOW_EX_STYLE)cp.ExStyle);
         Size minSize = MinimumSize;
         Size maxSize = MaximumSize;
+        Rectangle originalBounds = Bounds;
 
         // Clear out min and max size, otherwise this could affect the scaling logic.
         MinimumSize = Size.Empty;
         MaximumSize = Size.Empty;
-
-        bool parentUsesDefaultLayout = ParentInternal is { } parent && parent.LayoutEngine == DefaultLayout.Instance;
-
-        bool skipAnchorRescale = parentUsesDefaultLayout && FindForm() is { WindowState: FormWindowState.Maximized } && (Anchor & (AnchorStyles.Right | AnchorStyles.Bottom)) != 0;
-
-        if (skipAnchorRescale)
-        {
-            specified = BoundsSpecified.None;
-        }
 
         // This is raw because Min/Max size have been cleared at this point.
         Rectangle rawScaledBounds = GetScaledBounds(Bounds, factor, specified);
@@ -10644,25 +10639,22 @@ public unsafe partial class Control :
         // adornment size.
         Size adornmentSize = adornments.Size;
 
-        if (!skipAnchorRescale)
+        if (!minSize.IsEmpty)
         {
-            if (!minSize.IsEmpty)
-            {
-                minSize -= adornmentSize;
-                minSize = ScaleSize(
-                    LayoutUtils.UnionSizes(Size.Empty, minSize),
-                    factor.Width,
-                    factor.Height) + adornmentSize;
-            }
+            minSize -= adornmentSize;
+            minSize = ScaleSize(
+                LayoutUtils.UnionSizes(Size.Empty, minSize), // make sure we don't go below 0.
+                factor.Width,
+                factor.Height) + adornmentSize;
+        }
 
-            if (!maxSize.IsEmpty)
-            {
-                maxSize -= adornmentSize;
-                maxSize = ScaleSize(
-                    LayoutUtils.UnionSizes(Size.Empty, maxSize),
-                    factor.Width,
-                    factor.Height) + adornmentSize;
-            }
+        if (!maxSize.IsEmpty)
+        {
+            maxSize -= adornmentSize;
+            maxSize = ScaleSize(
+                LayoutUtils.UnionSizes(Size.Empty, maxSize), // make sure we don't go below 0.
+                factor.Width,
+                factor.Height) + adornmentSize;
         }
 
         // Apply the min/max size constraints - don't call ApplySizeConstraints
@@ -10671,7 +10663,61 @@ public unsafe partial class Control :
         Size scaledSize = LayoutUtils.IntersectSizes(rawScaledBounds.Size, maximumSize);
         scaledSize = LayoutUtils.UnionSizes(scaledSize, minSize);
 
-        if (ScaleHelper.IsScalingRequirementMet && parentUsesDefaultLayout && !skipAnchorRescale)
+        bool parentUsesDefaultLayout = ParentInternal?.LayoutEngine == DefaultLayout.Instance;
+        if (GetExtendedState(ExtendedStates.ScalingForFont)
+            && parentUsesDefaultLayout
+            && ParentInternal is { } parent
+            && FindForm() is { WindowState: FormWindowState.Maximized } form
+            && form.TryGetFontScalingDisplayRectangle(parent, out Rectangle originalDisplayRectangle)
+            && Dock == DockStyle.None
+            && (Anchor & (AnchorStyles.Right | AnchorStyles.Bottom)) != 0)
+        {
+            // A maximized form and its stretched containers do not grow proportionally with their font.
+            Rectangle displayRectangle = parent.DisplayRectangle;
+            AnchorStyles anchors = Anchor;
+            if ((anchors & AnchorStyles.Right) != 0 && (specified & BoundsSpecified.X) != 0)
+            {
+                int right = displayRectangle.Right
+                    - (int)Math.Round((originalDisplayRectangle.Right - originalBounds.Right) * factor.Width);
+                if ((anchors & AnchorStyles.Left) != 0)
+                {
+                    if ((specified & BoundsSpecified.Width) != 0 && !GetStyle(ControlStyles.FixedWidth))
+                    {
+                        scaledSize.Width = Math.Max(0, right - rawScaledBounds.X);
+                    }
+                }
+                else
+                {
+                    rawScaledBounds.X = right - scaledSize.Width;
+                }
+            }
+
+            if ((anchors & AnchorStyles.Bottom) != 0 && (specified & BoundsSpecified.Y) != 0)
+            {
+                int bottom = displayRectangle.Bottom
+                    - (int)Math.Round((originalDisplayRectangle.Bottom - originalBounds.Bottom) * factor.Height);
+                if ((anchors & AnchorStyles.Top) != 0)
+                {
+                    if ((specified & BoundsSpecified.Height) != 0 && !GetStyle(ControlStyles.FixedHeight))
+                    {
+                        scaledSize.Height = Math.Max(0, bottom - rawScaledBounds.Y);
+                    }
+                }
+                else
+                {
+                    rawScaledBounds.Y = bottom - scaledSize.Height;
+                }
+            }
+
+            scaledSize = LayoutUtils.UnionSizes(LayoutUtils.IntersectSizes(scaledSize, maximumSize), minSize);
+
+            // Rebase both anchor-layout versions on the reconciled bounds, not the intermediate scaled bounds.
+            DefaultLayout.SetAnchorInfo(this, null);
+        }
+        else if (parentUsesDefaultLayout
+            && (ScaleHelper.IsScalingRequirementMet
+                || (GetExtendedState(ExtendedStates.ScalingForFont)
+                    && FindForm() is { WindowState: FormWindowState.Minimized })))
         {
             // We need to scale AnchorInfo to update distances to container edges
             DefaultLayout.ScaleAnchorInfo(this, factor);

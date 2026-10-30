@@ -2985,8 +2985,8 @@ public partial class MaskedTextBox : TextBoxBase
                 break;
 
             case PInvokeCore.WM_SETFOCUS:
-                WmSetFocus();
                 base.WndProc(ref m);
+                WmSetFocus();
                 break;
 
             default:

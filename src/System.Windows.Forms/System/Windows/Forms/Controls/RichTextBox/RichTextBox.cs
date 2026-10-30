@@ -2553,6 +2553,11 @@ public partial class RichTextBox : TextBoxBase
         // base sets the Text property. It's important to do this *after* setting EM_AUTOUrlDETECT.
         base.OnHandleCreated(e);
 
+        if (!IsHandleCreated)
+        {
+            return;
+        }
+
         // For some reason, we need to set the OleCallback before setting the RTF property.
         UpdateOleCallback();
 

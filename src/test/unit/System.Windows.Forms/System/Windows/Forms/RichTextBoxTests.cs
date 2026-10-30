@@ -9112,6 +9112,36 @@ public partial class RichTextBoxTests
     }
 
     [WinFormsTheory]
+    [InlineData("")]
+    [InlineData("Some text")]
+    public void RichTextBox_OnHandleCreated_HandlerDestroysHandle_DoesNotRecreateHandle(string text)
+    {
+        using RichTextBox control = new() { Text = text };
+        control.CreateControl();
+        int callCount = 0;
+        EventHandler handler = (sender, e) =>
+        {
+            callCount++;
+            if (callCount == 1)
+            {
+                control.TestAccessor.Dynamic.DestroyHandle();
+            }
+        };
+        control.HandleCreated += handler;
+
+        control.TestAccessor.Dynamic.OnHandleCreated(EventArgs.Empty);
+
+        Assert.Equal(1, callCount);
+        Assert.False(control.IsHandleCreated);
+
+        control.HandleCreated -= handler;
+        control.CreateControl();
+
+        Assert.True(control.IsHandleCreated);
+        Assert.Equal(text, control.Text);
+    }
+
+    [WinFormsTheory]
     [NewAndDefaultData<EventArgs>]
     public void RichTextBox_OnHScroll_Invoke_CallsHScroll(EventArgs eventArgs)
     {

@@ -453,10 +453,15 @@ public class AnchorLayoutTests : ControlTestBase
     [InlineData(true, FormWindowState.Normal, 1f)]
     [InlineData(false, FormWindowState.Maximized, 1f)]
     [InlineData(true, FormWindowState.Maximized, 1f)]
+    [InlineData(false, FormWindowState.Normal, 0.5f, true)]
+    [InlineData(false, FormWindowState.Maximized, 0.5f, true)]
+    [InlineData(false, FormWindowState.Normal, 2f, true)]
+    [InlineData(false, FormWindowState.Maximized, 2f, true)]
     public void Minimized_FontChanged_RestoredControls_ScaleAnchorDistances(
         bool useAnchorLayoutV2,
         FormWindowState restoreState,
-        float fontScale)
+        float fontScale,
+        bool zeroAnchorDistances = false)
     {
         using AnchorLayoutV2Scope scope = new(enable: useAnchorLayoutV2);
         using Form form = new()
@@ -470,7 +475,9 @@ public class AnchorLayoutTests : ControlTestBase
         using Panel panel = new()
         {
             Anchor = AnchorAllDirection,
-            Bounds = new Rectangle(12, 50, 365, 150)
+            Bounds = zeroAnchorDistances
+                ? new Rectangle(12, 50, 388, 210)
+                : new Rectangle(12, 50, 365, 150)
         };
         using Panel footer = new()
         {

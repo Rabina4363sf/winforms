@@ -4,6 +4,7 @@
 #nullable disable
 
 using System.ComponentModel;
+using System.Data;
 using System.Drawing;
 using System.Windows.Forms.TestUtilities;
 using Moq;
@@ -2244,6 +2245,85 @@ public class ComboBoxTests
         AssertAutoCompleteCustomSource(["item1", "item2"], false);
         AssertAutoCompleteCustomSource(null, false);
         AssertAutoCompleteCustomSource(["item3", "item4"], false);
+    }
+
+    [WinFormsTheory]
+    [InlineData(AutoCompleteMode.Suggest, false)]
+    [InlineData(AutoCompleteMode.Append, false)]
+    [InlineData(AutoCompleteMode.SuggestAppend, false)]
+    [InlineData(AutoCompleteMode.Suggest, true)]
+    [InlineData(AutoCompleteMode.Append, true)]
+    [InlineData(AutoCompleteMode.SuggestAppend, true)]
+    public void ComboBox_AutoComplete_DuplicateDisplayMember_PreservesSelection(AutoCompleteMode mode, bool pressEnter)
+    {
+        using DataTable data = new();
+        data.Columns.Add("Code", typeof(string));
+        data.Columns.Add("Description", typeof(string));
+        data.Rows.Add("C001", "abc");
+        data.Rows.Add("C002", "abc");
+        data.Rows.Add("C003", "bbb");
+
+        using SubComboBox control = new()
+        {
+            BindingContext = new BindingContext(),
+            DisplayMember = "Description",
+            ValueMember = "Code",
+            DataSource = data,
+            AutoCompleteMode = mode,
+            AutoCompleteSource = AutoCompleteSource.ListItems
+        };
+        control.CreateControl();
+        control.SelectedIndex = -1;
+        int selectedIndexChangedCount = 0;
+        int selectedValueChangedCount = 0;
+        control.SelectedIndexChanged += (_, _) => selectedIndexChangedCount++;
+        control.SelectedValueChanged += (_, _) => selectedValueChangedCount++;
+
+        control.SelectedIndex = 1;
+        object selectedItem = control.SelectedItem;
+
+        if (pressEnter)
+        {
+            control.OnKeyDown(new KeyEventArgs(Keys.Enter));
+        }
+        else
+        {
+            control.TestAccessor.Dynamic.OnValidating(new CancelEventArgs());
+        }
+
+        Assert.Equal(1, control.SelectedIndex);
+        Assert.Same(selectedItem, control.SelectedItem);
+        Assert.Equal("C002", control.SelectedValue);
+        Assert.Equal("abc", control.Text);
+        Assert.Equal(1, selectedIndexChangedCount);
+        Assert.Equal(1, selectedValueChangedCount);
+    }
+
+    [WinFormsTheory]
+    [InlineData("abc", 0)]
+    [InlineData("ABC", 0)]
+    [InlineData("bbb", 2)]
+    [InlineData("missing", -1)]
+    [InlineData("", -1)]
+    public void ComboBox_AutoComplete_ValidatingTypedText_SelectsMatchingItem(string text, int expectedIndex)
+    {
+        using ComboBox control = new()
+        {
+            AutoCompleteMode = AutoCompleteMode.SuggestAppend,
+            AutoCompleteSource = AutoCompleteSource.ListItems
+        };
+        control.Items.AddRange(["abc", "abc", "bbb"]);
+        control.CreateControl();
+        control.SelectedText = text;
+        Assert.Equal(-1, control.SelectedIndex);
+        int selectedIndexChangedCount = 0;
+        control.SelectedIndexChanged += (_, _) => selectedIndexChangedCount++;
+
+        control.TestAccessor.Dynamic.OnValidating(new CancelEventArgs());
+
+        Assert.Equal(expectedIndex, control.SelectedIndex);
+        Assert.Equal(expectedIndex == -1 ? text : control.Items[expectedIndex], control.Text);
+        Assert.Equal(expectedIndex == -1 ? 0 : 1, selectedIndexChangedCount);
     }
 
     [WinFormsFact]

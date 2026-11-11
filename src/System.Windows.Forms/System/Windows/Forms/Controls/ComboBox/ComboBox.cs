@@ -1259,7 +1259,9 @@ public partial class ComboBox : ListControl
         bool textChanged = (text != _lastTextChangedValue);
         bool selectedIndexSet = false;
 
-        if (setSelectedIndex)
+        // Preserve the selected item's identity when multiple items have the same display text.
+        if (setSelectedIndex && (SelectedIndex == -1
+            || string.Compare(text, GetItemText(SelectedItem), ignoreCase: false, CultureInfo.CurrentCulture) != 0))
         {
             // Process return key. This is sent by the AutoComplete DropDown when a
             // selection is made from the DropDown

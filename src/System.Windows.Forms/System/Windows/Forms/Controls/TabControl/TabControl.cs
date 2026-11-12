@@ -1828,7 +1828,7 @@ public partial class TabControl : Control
     }
 
     /// <summary>
-    ///  Set the panel selections appropriately
+    ///  Updates page bounds, visibility, and focus to reflect the current selection.
     /// </summary>
     protected void UpdateTabSelection(bool updateFocus)
     {
@@ -1839,29 +1839,29 @@ public partial class TabControl : Control
             // make current panel invisible
             TabPage[] tabPages = GetTabPages();
 
-            if (index != -1)
+            Rectangle displayRectangle = DisplayRectangle;
+
+            for (int i = 0; i < tabPages.Length; i++)
             {
-                Rectangle displayRectangle = DisplayRectangle;
-
-                for (int i = 0; i < tabPages.Length; i++)
+                // Changing the bounds of the TabPage during scaling
+                // will force a layout to occur. After this layout
+                // the TabPage will then be scaled again resulting
+                // in incorrect sizes. Suspend Layout in this case.
+                if (_currentlyScaling)
                 {
-                    // Changing the bounds of the TabPage during scaling
-                    // will force a layout to occur. After this layout
-                    // the TabPage will then be scaled again resulting
-                    // in incorrect sizes. Suspend Layout in this case.
-                    if (_currentlyScaling)
-                    {
-                        tabPages[i].SuspendLayout();
-                    }
-
-                    tabPages[i].Bounds = displayRectangle;
-
-                    if (_currentlyScaling)
-                    {
-                        tabPages[i].ResumeLayout(false);
-                    }
+                    tabPages[i].SuspendLayout();
                 }
 
+                tabPages[i].Bounds = displayRectangle;
+
+                if (_currentlyScaling)
+                {
+                    tabPages[i].ResumeLayout(false);
+                }
+            }
+
+            if (index != -1)
+            {
                 // After changing the Bounds of the selected TabPage, make it redraw.
                 // Use Invalidate directly here has no performance issue, since Resize is
                 // called at low frequency.

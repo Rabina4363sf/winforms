@@ -774,8 +774,11 @@ public class TabControlTests
         Assert.Equal(0, createdCallCount);
     }
 
-    [WinFormsFact]
-    public void TabControl_Resize_UpdatesBoundsOfAllTabPages()
+    [WinFormsTheory]
+    [InlineData(-1)]
+    [InlineData(0)]
+    [InlineData(1)]
+    public void TabControl_Resize_UpdatesBoundsOfAllTabPages(int selectedIndex)
     {
         using TabControl control = new()
         {
@@ -787,11 +790,15 @@ public class TabControlTests
         control.TabPages.Add(page2);
 
         Assert.NotEqual(IntPtr.Zero, control.Handle);
+        control.SelectedIndex = selectedIndex;
 
         control.Size = new Size(340, 160);
 
         Assert.Equal(control.DisplayRectangle, page1.Bounds);
         Assert.Equal(control.DisplayRectangle, page2.Bounds);
+        Assert.Equal(selectedIndex, control.SelectedIndex);
+        Assert.Equal(selectedIndex == 0, page1.Visible);
+        Assert.Equal(selectedIndex == 1, page2.Visible);
     }
 
     [WinFormsFact]

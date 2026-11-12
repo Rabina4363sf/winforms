@@ -513,6 +513,77 @@ public class DateTimePickerTests : IDisposable
     }
 
     [WinFormsTheory]
+    [BoolData]
+    public void DateTimePicker_Value_SetDuringValidateChildren_AllowsSubsequentEdit(bool focused)
+    {
+        using Form form = new();
+        using DateTimePicker control = new()
+        {
+            Format = DateTimePickerFormat.Custom,
+            CustomFormat = "HH:mm",
+            ShowUpDown = true
+        };
+        using TextBox textBox = new() { Top = control.Bottom };
+        form.Controls.AddRange([control, textBox]);
+        form.ActiveControl = focused ? control : textBox;
+        form.Show();
+        DateTime expected = new(2023, 1, 1, 12, 34, 56);
+        control.Validating += (_, _) => control.Value = expected;
+
+        form.ValidateChildren().Should().BeTrue();
+        control.Value.Should().Be(expected);
+        control.Focused.Should().Be(focused);
+
+        control.Select();
+        int valueChangedCount = 0;
+        control.ValueChanged += (_, _) => valueChangedCount++;
+        PInvokeCore.SendMessage(control, PInvokeCore.WM_KEYDOWN, (WPARAM)(uint)Keys.Up);
+
+        control.Value.Should().Be(expected.AddHours(1));
+        valueChangedCount.Should().Be(1);
+    }
+
+    [WinFormsTheory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void DateTimePicker_Value_SetDuringFocusValidation_PreservesValue(bool pendingEdit, bool sameValue)
+    {
+        using Form form = new();
+        using DateTimePicker control = new()
+        {
+            Format = DateTimePickerFormat.Custom,
+            CustomFormat = "HH:mm",
+            ShowUpDown = true,
+            Value = new DateTime(2023, 1, 1, 10, 0, 0)
+        };
+        using TextBox textBox = new() { Top = control.Bottom };
+        form.Controls.AddRange([control, textBox]);
+        form.Show();
+        control.Select();
+        DateTime expected = sameValue ? control.Value : new(2023, 1, 1, 12, 34, 56);
+        control.Validating += (_, _) => control.Value = sameValue ? control.Value : expected;
+
+        if (pendingEdit)
+        {
+            PInvokeCore.SendMessage(control, PInvokeCore.WM_CHAR, (WPARAM)(uint)'2');
+            control.Value.Should().Be(new DateTime(2023, 1, 1, 10, 0, 0));
+        }
+
+        int valueChangedCount = 0;
+        control.ValueChanged += (_, _) => valueChangedCount++;
+        textBox.Select();
+
+        textBox.Focused.Should().BeTrue();
+        control.Value.Should().Be(expected);
+
+        if (sameValue)
+        {
+            valueChangedCount.Should().Be(0);
+        }
+    }
+
+    [WinFormsTheory]
     [InlineData("0001-01-01")]
     [InlineData("9999-12-31")]
     public void DateTimePicker_Value_SetInvalid_ThrowsArgumentOutOfRangeException(string value)

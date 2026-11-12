@@ -866,7 +866,8 @@ public partial class DateTimePicker : Control
             // Check for value set here; if we've not set the value yet, it'll be Now, so the second part of the
             // test will fail. So, if userHasSetValue isn't set, we don't care if the value is still the same -
             // and we'll update anyway.
-            if (_userHasSetValue && !valueChanged)
+            // During validation, even an unchanged value must replace any pending native edit.
+            if (_userHasSetValue && !valueChanged && !_isValidating)
             {
                 return;
             }
@@ -941,7 +942,8 @@ public partial class DateTimePicker : Control
         finally
         {
             _isValidating = false;
-            if (e.Cancel)
+            // Only preserve the value for a native focus-loss notification that is still pending.
+            if (e.Cancel || !Focused || Application.ThreadContext.FromCurrent().ActivatingControl is null)
             {
                 _valueSetDuringValidation = null;
             }

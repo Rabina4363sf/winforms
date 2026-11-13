@@ -889,10 +889,7 @@ public partial class DateTimePicker : Control
 
             _value = value;
             _userHasSetValue = true;
-            if (_isValidating)
-            {
-                _valueSetDuringValidation = value;
-            }
+            _valueSetDuringValidation = _isValidating ? value : null;
 
             if (IsHandleCreated)
             {
@@ -934,16 +931,21 @@ public partial class DateTimePicker : Control
 
     protected override void OnValidating(CancelEventArgs e)
     {
+        bool validationCompleted = false;
         _isValidating = true;
         try
         {
             base.OnValidating(e);
+            validationCompleted = true;
         }
         finally
         {
             _isValidating = false;
             // Only preserve the value for a native focus-loss notification that is still pending.
-            if (e.Cancel || !Focused || Application.ThreadContext.FromCurrent().ActivatingControl is null)
+            if (!validationCompleted
+                || e.Cancel
+                || !Focused
+                || Application.ThreadContext.FromCurrent().ActivatingControl is null)
             {
                 _valueSetDuringValidation = null;
             }

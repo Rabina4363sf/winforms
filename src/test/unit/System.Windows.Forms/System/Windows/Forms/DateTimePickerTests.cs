@@ -674,6 +674,170 @@ public class DateTimePickerTests : IDisposable
     }
 
     [WinFormsTheory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void DateTimePicker_Value_ValidationCancelled_AllowsSubsequentEdit(bool ancestorCancels, bool allowFocusChange)
+    {
+        using Form form = new()
+        {
+            AutoValidate = allowFocusChange
+                ? AutoValidate.EnableAllowFocusChange
+                : AutoValidate.EnablePreventFocusChange
+        };
+        using UserControl container = new();
+        using DateTimePicker control = new()
+        {
+            Format = DateTimePickerFormat.Custom,
+            CustomFormat = "HH:mm",
+            ShowUpDown = true
+        };
+        using TextBox textBox = new() { Top = container.Bottom };
+        container.Controls.Add(control);
+        form.Controls.AddRange([container, textBox]);
+        form.Show();
+        control.Select();
+        DateTime expected = new(2023, 1, 1, 12, 34, 56);
+        int ancestorValidations = 0;
+        control.Validating += (_, e) =>
+        {
+            control.Value = expected;
+            e.Cancel = !ancestorCancels;
+        };
+        container.Validating += (_, e) =>
+        {
+            ancestorValidations++;
+            e.Cancel = ancestorCancels;
+        };
+
+        textBox.Select();
+
+        textBox.Focused.Should().Be(allowFocusChange);
+        control.Focused.Should().Be(!allowFocusChange);
+        ancestorValidations.Should().Be(ancestorCancels ? 1 : 0);
+        control.Select();
+        int valueChangedCount = 0;
+        control.ValueChanged += (_, _) => valueChangedCount++;
+        PInvokeCore.SendMessage(control, PInvokeCore.WM_KEYDOWN, (WPARAM)(uint)Keys.Up);
+
+        control.Value.Should().Be(expected.AddHours(1));
+        valueChangedCount.Should().Be(1);
+    }
+
+    [WinFormsTheory]
+    [InlineData(false, false, "Validating")]
+    [InlineData(false, true, "Validating")]
+    [InlineData(true, false, "Validating")]
+    [InlineData(true, true, "Validating")]
+    [InlineData(false, false, "Validated")]
+    [InlineData(false, true, "Validated")]
+    [InlineData(true, false, "Validated")]
+    [InlineData(true, true, "Validated")]
+    [InlineData(false, false, "LostFocus")]
+    [InlineData(false, true, "LostFocus")]
+    [InlineData(true, false, "LostFocus")]
+    [InlineData(true, true, "LostFocus")]
+    public void DateTimePicker_Text_ResetDuringValidation_PreservesReset(bool showCheckBox, bool pendingEdit, string resetEvent)
+    {
+        using Form form = new();
+        using DateTimePicker control = new()
+        {
+            Format = DateTimePickerFormat.Custom,
+            CustomFormat = "HH:mm",
+            ShowUpDown = true,
+            ShowCheckBox = showCheckBox,
+            Value = new DateTime(2023, 1, 1, 10, 0, 0)
+        };
+        using TextBox textBox = new() { Top = control.Bottom };
+        form.Controls.AddRange([control, textBox]);
+        form.Show();
+        control.Select();
+        DateTime resetValue = default;
+        string resetText = null;
+        bool resetChecked = false;
+        int resetCount = 0;
+        void Reset()
+        {
+            control.Text = string.Empty;
+            resetValue = control.Value;
+            resetText = control.Text;
+            resetChecked = control.Checked;
+            resetCount++;
+        }
+
+        control.Validating += (_, _) =>
+        {
+            control.Value = new DateTime(2023, 1, 1, 12, 34, 56);
+            if (resetEvent == "Validating")
+            {
+                Reset();
+            }
+        };
+        EventHandler handler = (_, _) => Reset();
+        if (resetEvent == "Validated")
+        {
+            control.Validated += handler;
+        }
+        else if (resetEvent == "LostFocus")
+        {
+            control.LostFocus += handler;
+        }
+
+        if (pendingEdit)
+        {
+            PInvokeCore.SendMessage(control, PInvokeCore.WM_CHAR, (WPARAM)(uint)'2');
+        }
+
+        DateTime beforeReset = DateTime.Now;
+        textBox.Select();
+        control.LostFocus -= handler;
+
+        textBox.Focused.Should().BeTrue();
+        resetCount.Should().Be(1);
+        resetValue.Should().BeOnOrAfter(beforeReset.AddSeconds(-1));
+        control.Value.Should().Be(resetValue);
+        control.Text.Should().Be(resetText);
+        control.Checked.Should().Be(resetChecked);
+        control.Checked.Should().BeFalse();
+    }
+
+    [WinFormsFact]
+    public void DateTimePicker_Value_ReentrantValidation_PreservesLatestValue()
+    {
+        using Form form = new();
+        using DateTimePicker control = new()
+        {
+            Format = DateTimePickerFormat.Custom,
+            CustomFormat = "HH:mm",
+            ShowUpDown = true,
+            Value = new DateTime(2023, 1, 1, 10, 0, 0)
+        };
+        using TextBox textBox = new() { Top = control.Bottom };
+        form.Controls.AddRange([control, textBox]);
+        form.Show();
+        control.Select();
+        DateTime expected = new(2023, 1, 1, 12, 34, 56);
+        bool reentered = false;
+        control.Validating += (_, _) =>
+        {
+            if (!reentered)
+            {
+                reentered = true;
+                form.ValidateChildren();
+                control.Value = expected;
+            }
+        };
+        PInvokeCore.SendMessage(control, PInvokeCore.WM_CHAR, (WPARAM)(uint)'2');
+
+        textBox.Select();
+
+        textBox.Focused.Should().BeTrue();
+        reentered.Should().BeTrue();
+        control.Value.Should().Be(expected);
+    }
+
+    [WinFormsTheory]
     [InlineData("0001-01-01")]
     [InlineData("9999-12-31")]
     public void DateTimePicker_Value_SetInvalid_ThrowsArgumentOutOfRangeException(string value)

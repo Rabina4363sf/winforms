@@ -932,6 +932,7 @@ public partial class DateTimePicker : Control
     protected override void OnValidating(CancelEventArgs e)
     {
         bool validationCompleted = false;
+        bool wasValidating = _isValidating;
         _isValidating = true;
         try
         {
@@ -940,7 +941,7 @@ public partial class DateTimePicker : Control
         }
         finally
         {
-            _isValidating = false;
+            _isValidating = wasValidating;
             // Only preserve the value for a native focus-loss notification that is still pending.
             if (!validationCompleted
                 || e.Cancel
@@ -1271,6 +1272,8 @@ public partial class DateTimePicker : Control
     /// </summary>
     private void ResetValue()
     {
+        _valueSetDuringValidation = null;
+
         // always update on reset with ShowNone = false -- as it'll take the current time.
         _value = DateTime.Now;
 
@@ -1500,6 +1503,13 @@ public partial class DateTimePicker : Control
     private unsafe void WmDateTimeChange(ref Message m)
     {
         NMDATETIMECHANGE* nmdtc = (NMDATETIMECHANGE*)(nint)m.LParamInternal;
+
+        // An ancestor may have cancelled the focus change after this control validated.
+        // Notifications while still focused and outside validation are new edits, not focus-loss updates.
+        if (!_isValidating && Focused)
+        {
+            _valueSetDuringValidation = null;
+        }
 
         if (_valueSetDuringValidation is DateTime valueSetDuringValidation
             && nmdtc->dwFlags != NMDATETIMECHANGE_FLAGS.GDT_NONE

@@ -40,6 +40,9 @@ internal class ButtonDarkModeAdapter : ButtonBaseAdapter
         }
     }
 
+    private bool IsDefaultButton
+        => _modern ? ModernButtonColorMath.IsAcceptButton(Control) : Control.IsDefault;
+
     private Color GetButtonTextColor(
         IDeviceContext deviceContext,
         PushButtonState state,
@@ -75,7 +78,7 @@ internal class ButtonDarkModeAdapter : ButtonBaseAdapter
         }
         else
         {
-            textColor = ButtonDarkModeRenderer.GetTextColor(state, Control.IsDefault, backColor);
+            textColor = ButtonDarkModeRenderer.GetTextColor(state, IsDefaultButton, backColor);
         }
 
         return textColor;
@@ -85,8 +88,8 @@ internal class ButtonDarkModeAdapter : ButtonBaseAdapter
     {
         Color backColor;
 
-        // Net11 default buttons must always use the accent-driven palette, even when BackColor is set.
-        if (_modern && Control.IsDefault)
+        // Only the designated accept button uses the accent palette, regardless of which button has focus.
+        if (_modern && IsDefaultButton)
         {
             backColor = ButtonDarkModeRenderer.GetBackgroundColor(
                 state,
@@ -103,14 +106,14 @@ internal class ButtonDarkModeAdapter : ButtonBaseAdapter
             {
                 backColor = ButtonDarkModeRenderer.GetBackgroundColor(
                     state,
-                    Control.IsDefault,
+                    IsDefaultButton,
                     Control.BackColor);
             }
             else
             {
                 backColor = ButtonDarkModeRenderer.GetBackgroundColor(
                     state,
-                    Control.IsDefault,
+                    IsDefaultButton,
                     customBaseColor: Color.Empty);
             }
         }
@@ -155,7 +158,7 @@ internal class ButtonDarkModeAdapter : ButtonBaseAdapter
                 Control.ClientRectangle,
                 Control.FlatStyle,
                 state,
-                Control.IsDefault,
+                IsDefaultButton,
                 Control.Focused,
                 Control.ShowFocusCues,
                 parentBackColor,

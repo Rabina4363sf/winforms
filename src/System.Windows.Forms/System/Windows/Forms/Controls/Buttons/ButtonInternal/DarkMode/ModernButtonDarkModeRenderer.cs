@@ -75,8 +75,6 @@ internal sealed class ModernButtonDarkModeRenderer : ButtonDarkModeRendererBase
     internal override Padding GetPreferredSizePadding()
         => new(FocusBodyInset + Scale(ContentInsetLogical));
 
-    private protected override bool UseModernStateDefaults => true;
-
     private protected override bool PaintParentBackground => true;
 
     public override Rectangle DrawButtonBackground(

@@ -28,8 +28,6 @@ internal sealed class ModernFlatButtonRenderer : ButtonDarkModeRendererBase
 
     private protected override Padding PaddingCore => Padding.Empty;
 
-    private protected override bool UseModernStateDefaults => true;
-
     internal override Padding GetPreferredSizePadding()
         => new(Math.Max(BorderThickness, Scale(ContentInsetLogical)));
 

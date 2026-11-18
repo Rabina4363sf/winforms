@@ -14,8 +14,6 @@ internal abstract partial class ButtonDarkModeRendererBase : IButtonRenderer
     // Define padding values for each renderer type
     private protected abstract Padding PaddingCore { get; }
 
-    private protected virtual bool UseModernStateDefaults => false;
-
     /// <summary>
     ///  Gets the padding that insets the button body from the control bounds for the given focus state.
     /// </summary>
@@ -180,13 +178,6 @@ internal abstract partial class ButtonDarkModeRendererBase : IButtonRenderer
             && FlatAppearance is { MouseDownBackColorCore.IsEmpty: false } pressedAppearance)
         {
             return pressedAppearance.MouseDownBackColorCore;
-        }
-
-        if (UseModernStateDefaults
-            && FlatAppearance is not null
-            && state is PushButtonState.Hot or PushButtonState.Pressed)
-        {
-            return ModernButtonColorMath.GetStateColor(this, state, isDefault, customBaseColor);
         }
 
         if (!customBaseColor.IsEmpty)

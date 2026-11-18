@@ -11,23 +11,15 @@ namespace System.Windows.Forms;
 /// </summary>
 internal static class ModernButtonColorMath
 {
-    internal const float AccentBlendAmount = 0.2f;
     internal const float MinimumTextContrastRatio = PopupButtonColorMath.MinimumReadableContrastRatio;
     private const float DefaultHoverLightenAmount = 0.08f;
     private const float DefaultPressedDarkenAmount = 0.12f;
 
-    internal static Color GetMouseDownColor()
-        => Application.SystemVisualSettings.AccentColor;
-
-    internal static Color GetMouseOverColor(ButtonBase owner, FlatButtonAppearance appearance)
-    {
-        Color baseColor = GetRenderedBaseColor(owner, appearance);
-
-        return BlendWithAccent(baseColor);
-    }
-
-    internal static Color BlendWithAccent(Color baseColor)
-        => PopupButtonColorMath.Blend(baseColor, Application.SystemVisualSettings.AccentColor, AccentBlendAmount);
+    /// <summary>
+    ///  Identifies the designated accept button independently of the temporary default state caused by focus.
+    /// </summary>
+    internal static bool IsAcceptButton(ButtonBase owner)
+        => ReferenceEquals(owner.FindForm()?.AcceptButton, owner);
 
     internal static Color GetDefaultButtonColor(PushButtonState state)
         => GetDefaultButtonColor(Application.SystemVisualSettings.AccentColor, state);
@@ -53,30 +45,10 @@ internal static class ModernButtonColorMath
         return foreColor;
     }
 
-    internal static Color GetStateColor(
-        ButtonDarkModeRendererBase renderer,
-        PushButtonState state,
-        bool isDefault,
-        Color customBaseColor)
-    {
-        if (customBaseColor.IsEmpty && isDefault)
-        {
-            return GetDefaultButtonColor(state);
-        }
-
-        Color baseColor = customBaseColor.IsEmpty
-            ? renderer.GetBackgroundColor(PushButtonState.Normal, isDefault)
-            : customBaseColor;
-
-        return state switch
-        {
-            PushButtonState.Pressed => GetMouseDownColor(),
-            PushButtonState.Hot => BlendWithAccent(baseColor),
-            _ => baseColor
-        };
-    }
-
-    internal static Color GetRenderedBaseColor(ButtonBase owner, FlatButtonAppearance appearance)
+    /// <summary>
+    ///  Resolves appearance defaults from the same palette used to paint the button.
+    /// </summary>
+    internal static Color GetStateColor(ButtonBase owner, FlatButtonAppearance appearance, PushButtonState state)
     {
         ButtonDarkModeRendererBase renderer = owner.FlatStyle switch
         {
@@ -89,11 +61,11 @@ internal static class ModernButtonColorMath
         renderer.DeviceDpi = owner.DeviceDpi;
         renderer.FlatAppearance = appearance;
 
-        if (owner.BackColor != Control.DefaultBackColor)
-        {
-            return owner.BackColor;
-        }
+        bool isDefault = IsAcceptButton(owner);
+        Color customBaseColor = !isDefault && owner.ShouldSerializeBackColor()
+            ? owner.BackColor
+            : Color.Empty;
 
-        return renderer.GetBackgroundColor(PushButtonState.Normal, owner.IsDefault);
+        return renderer.GetBackgroundColor(state, isDefault, customBaseColor);
     }
 }

@@ -221,9 +221,22 @@ public partial class Form : ContainerControl
         get => Properties.GetValueOrDefault<IButtonControl?>(s_propAcceptButton);
         set
         {
-            if (Properties.AddOrRemoveValue(s_propAcceptButton, value) != value)
+            IButtonControl? previous = Properties.AddOrRemoveValue(s_propAcceptButton, value);
+            if (previous != value)
             {
                 UpdateDefaultButton();
+
+                if (previous is ButtonBase previousControl
+                    && previousControl.EffectiveVisualStylesModeInternal >= VisualStylesMode.Net11)
+                {
+                    previousControl.Invalidate();
+                }
+
+                if (value is ButtonBase newControl
+                    && newControl.EffectiveVisualStylesModeInternal >= VisualStylesMode.Net11)
+                {
+                    newControl.Invalidate();
+                }
             }
         }
     }

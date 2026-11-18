@@ -119,7 +119,7 @@ public class FlatButtonAppearance
         get => _mouseDownBackColor.IsEmpty
             && _owner.FlatStyle != FlatStyle.Popup
             && _owner.EffectiveVisualStylesModeInternal >= VisualStylesMode.Net11
-            ? ModernButtonColorMath.GetMouseDownColor()
+            ? ModernButtonColorMath.GetStateColor(_owner, this, VisualStyles.PushButtonState.Pressed)
             : _mouseDownBackColor;
         set
         {
@@ -146,7 +146,7 @@ public class FlatButtonAppearance
         get => _mouseOverBackColor.IsEmpty
             && _owner.FlatStyle != FlatStyle.Popup
             && _owner.EffectiveVisualStylesModeInternal >= VisualStylesMode.Net11
-            ? ModernButtonColorMath.GetMouseOverColor(_owner, this)
+            ? ModernButtonColorMath.GetStateColor(_owner, this, VisualStyles.PushButtonState.Hot)
             : _mouseOverBackColor;
         set
         {

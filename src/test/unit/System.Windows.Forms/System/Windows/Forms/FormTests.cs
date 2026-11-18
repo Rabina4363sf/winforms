@@ -221,6 +221,36 @@ public partial class FormTests
     }
 
     [WinFormsTheory]
+    [InlineData(VisualStylesMode.Classic, 0)]
+    [InlineData(VisualStylesMode.Net11, 1)]
+    [InlineData(VisualStylesMode.Latest, 1)]
+    public void Form_AcceptButton_SetWhileAnotherButtonIsActive_InvalidatesModernButtons(
+        VisualStylesMode visualStylesMode,
+        int expectedInvalidations)
+    {
+        using Form form = new() { VisualStylesMode = visualStylesMode };
+        using Button activeButton = new();
+        using Button previousButton = new();
+        using Button nextButton = new();
+        form.Controls.AddRange([activeButton, previousButton, nextButton]);
+        form.ActiveControl = activeButton;
+        form.AcceptButton = previousButton;
+        Assert.True(activeButton.IsDefault);
+        Assert.NotEqual(IntPtr.Zero, previousButton.Handle);
+        Assert.NotEqual(IntPtr.Zero, nextButton.Handle);
+        int previousInvalidations = 0;
+        int nextInvalidations = 0;
+        previousButton.Invalidated += (_, _) => previousInvalidations++;
+        nextButton.Invalidated += (_, _) => nextInvalidations++;
+
+        form.AcceptButton = nextButton;
+
+        Assert.Equal(expectedInvalidations, previousInvalidations);
+        Assert.Equal(expectedInvalidations, nextInvalidations);
+        Assert.True(activeButton.IsDefault);
+    }
+
+    [WinFormsTheory]
     [BoolData]
     public void Form_Active_Set_GetReturnsExpected(bool value)
     {

@@ -677,10 +677,8 @@ public class ButtonVisualStylesTests
     [WinFormsTheory]
     [InlineData(FlatStyle.Standard, false)]
     [InlineData(FlatStyle.Flat, false)]
-    [InlineData(FlatStyle.Popup, false)]
     [InlineData(FlatStyle.Standard, true)]
     [InlineData(FlatStyle.Flat, true)]
-    [InlineData(FlatStyle.Popup, true)]
     public void ButtonDarkModeAdapter_ModernNormalButton_StateColorsAreNeutral(FlatStyle flatStyle, bool darkMode)
     {
         using SystemVisualSettingsTestScope settingsScope = new(
@@ -722,10 +720,8 @@ public class ButtonVisualStylesTests
     [WinFormsTheory]
     [InlineData(FlatStyle.Standard, false)]
     [InlineData(FlatStyle.Flat, false)]
-    [InlineData(FlatStyle.Popup, false)]
     [InlineData(FlatStyle.Standard, true)]
     [InlineData(FlatStyle.Flat, true)]
-    [InlineData(FlatStyle.Popup, true)]
     public void ButtonDarkModeAdapter_ModernFocusedButton_OnlyAcceptButtonUsesAccent(FlatStyle flatStyle, bool darkMode)
     {
         using SystemVisualSettingsTestScope settingsScope = new(
@@ -780,15 +776,12 @@ public class ButtonVisualStylesTests
                 Assert.Equal(ModernButtonColorMath.GetDefaultButtonColor(state), acceptColor);
             }
 
-            if (flatStyle != FlatStyle.Popup)
-            {
-                Assert.Equal(
-                    (Color)accessor.GetButtonBackColor(VisualStyles.PushButtonState.Hot),
-                    button.FlatAppearance.MouseOverBackColor);
-                Assert.Equal(
-                    ModernButtonColorMath.GetDefaultButtonColor(VisualStyles.PushButtonState.Hot),
-                    acceptButton.FlatAppearance.MouseOverBackColor);
-            }
+            Assert.Equal(
+                (Color)accessor.GetButtonBackColor(VisualStyles.PushButtonState.Hot),
+                button.FlatAppearance.MouseOverBackColor);
+            Assert.Equal(
+                ModernButtonColorMath.GetDefaultButtonColor(VisualStyles.PushButtonState.Hot),
+                acceptButton.FlatAppearance.MouseOverBackColor);
         }
         finally
         {

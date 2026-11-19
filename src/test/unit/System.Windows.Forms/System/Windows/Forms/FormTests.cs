@@ -221,11 +221,13 @@ public partial class FormTests
     }
 
     [WinFormsTheory]
-    [InlineData(VisualStylesMode.Classic, 0)]
-    [InlineData(VisualStylesMode.Net11, 1)]
-    [InlineData(VisualStylesMode.Latest, 1)]
-    public void Form_AcceptButton_SetWhileAnotherButtonIsActive_InvalidatesModernButtons(
+    [InlineData(VisualStylesMode.Classic, true, 0)]
+    [InlineData(VisualStylesMode.Net11, true, 1)]
+    [InlineData(VisualStylesMode.Latest, true, 1)]
+    [InlineData(VisualStylesMode.Net11, false, 1)]
+    public void Form_AcceptButton_Set_InvalidatesEachAffectedButtonOnce(
         VisualStylesMode visualStylesMode,
+        bool anotherButtonIsActive,
         int expectedInvalidations)
     {
         using Form form = new() { VisualStylesMode = visualStylesMode };
@@ -233,11 +235,16 @@ public partial class FormTests
         using Button previousButton = new();
         using Button nextButton = new();
         form.Controls.AddRange([activeButton, previousButton, nextButton]);
-        form.ActiveControl = activeButton;
+        if (anotherButtonIsActive)
+        {
+            form.ActiveControl = activeButton;
+        }
+
         form.AcceptButton = previousButton;
-        Assert.True(activeButton.IsDefault);
         Assert.NotEqual(IntPtr.Zero, previousButton.Handle);
         Assert.NotEqual(IntPtr.Zero, nextButton.Handle);
+        Assert.Equal(anotherButtonIsActive, activeButton.IsDefault);
+        Assert.Equal(!anotherButtonIsActive, previousButton.IsDefault);
         int previousInvalidations = 0;
         int nextInvalidations = 0;
         previousButton.Invalidated += (_, _) => previousInvalidations++;
@@ -247,7 +254,9 @@ public partial class FormTests
 
         Assert.Equal(expectedInvalidations, previousInvalidations);
         Assert.Equal(expectedInvalidations, nextInvalidations);
-        Assert.True(activeButton.IsDefault);
+        Assert.Equal(anotherButtonIsActive, activeButton.IsDefault);
+        Assert.False(previousButton.IsDefault);
+        Assert.Equal(!anotherButtonIsActive, nextButton.IsDefault);
     }
 
     [WinFormsTheory]

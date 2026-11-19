@@ -166,6 +166,28 @@ public class PopupButtonVisualStylesTests
     }
 
     [WinFormsFact]
+    public void AnimatedPopupButtonRenderer_AcceptButton_UsesAccentWhileAnotherButtonIsActive()
+    {
+        using SystemVisualSettingsTestScope settingsScope = new(
+            clientAreaAnimationEnabled: false,
+            accentColor: Color.Maroon);
+        using Form form = new() { VisualStylesMode = VisualStylesMode.Net11 };
+        using Button activeButton = new();
+        using Button button = new() { FlatStyle = FlatStyle.Popup, BackColor = Color.Navy };
+        form.Controls.AddRange([activeButton, button]);
+        form.ActiveControl = activeButton;
+        form.AcceptButton = button;
+        Assert.False(button.IsDefault);
+
+        using AnimatedPopupButtonRenderer renderer = new(button);
+        (Color normal, Color hover, Color pressed) = renderer.GetStateColors();
+
+        Assert.Equal(Color.Maroon, normal);
+        Assert.Equal(ModernButtonColorMath.GetDefaultButtonColor(Color.Maroon, VisualStyles.PushButtonState.Hot), hover);
+        Assert.Equal(ModernButtonColorMath.GetDefaultButtonColor(Color.Maroon, VisualStyles.PushButtonState.Pressed), pressed);
+    }
+
+    [WinFormsFact]
     public void AnimatedPopupButtonRenderer_ExplicitStateColorsWin()
     {
         using Button button = new()

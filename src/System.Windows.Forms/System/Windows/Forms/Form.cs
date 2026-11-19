@@ -224,18 +224,27 @@ public partial class Form : ContainerControl
             IButtonControl? previous = Properties.AddOrRemoveValue(s_propAcceptButton, value);
             if (previous != value)
             {
+                var previousButton = previous as ButtonBase;
+                var newButton = value as ButtonBase;
+                bool previousWasDefault = previousButton?.IsDefault ?? false;
+                bool newWasDefault = newButton?.IsDefault ?? false;
+
                 UpdateDefaultButton();
 
-                if (previous is ButtonBase previousControl
-                    && previousControl.EffectiveVisualStylesModeInternal >= VisualStylesMode.Net11)
-                {
-                    previousControl.Invalidate();
-                }
+                InvalidateAcceptButton(previousButton, previousWasDefault);
+                InvalidateAcceptButton(newButton, newWasDefault);
+            }
 
-                if (value is ButtonBase newControl
-                    && newControl.EffectiveVisualStylesModeInternal >= VisualStylesMode.Net11)
+            void InvalidateAcceptButton(ButtonBase? button, bool wasDefault)
+            {
+                // A keyboard-default transition already repaints the button.
+                if (button is not null
+                    && button.IsDefault == wasDefault
+                    && button.FlatStyle != FlatStyle.System
+                    && button.EffectiveVisualStylesModeInternal >= VisualStylesMode.Net11
+                    && button.FindForm() == this)
                 {
-                    newControl.Invalidate();
+                    button.Invalidate();
                 }
             }
         }

@@ -236,6 +236,14 @@ internal sealed class AnimatedPopupButtonRenderer : AnimatedControlRenderer
         _baseColorRenderer.DeviceDpi = button.DeviceDpi;
         _baseColorRenderer.FlatAppearance = flatAppearance;
 
+        if (button.Enabled && ModernButtonColorMath.IsAcceptButton(button))
+        {
+            return (
+                _baseColorRenderer.GetBackgroundColor(PushButtonState.Normal, isDefault: true),
+                _baseColorRenderer.GetBackgroundColor(PushButtonState.Hot, isDefault: true, customBaseColor: Color.Empty),
+                _baseColorRenderer.GetBackgroundColor(PushButtonState.Pressed, isDefault: true, customBaseColor: Color.Empty));
+        }
+
         bool hasCustomBackColor = button.EffectiveVisualStylesModeInternal >= VisualStylesMode.Net11
             ? button.ShouldSerializeBackColor()
             : button.BackColor != Control.DefaultBackColor;

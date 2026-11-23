@@ -62,6 +62,75 @@ public class ButtonVisualStylesTests
     }
 
     [WinFormsTheory]
+    [InlineData(typeof(CheckBox), FlatStyle.Standard)]
+    [InlineData(typeof(CheckBox), FlatStyle.Flat)]
+    [InlineData(typeof(CheckBox), FlatStyle.Popup)]
+    [InlineData(typeof(RadioButton), FlatStyle.Standard)]
+    [InlineData(typeof(RadioButton), FlatStyle.Flat)]
+    [InlineData(typeof(RadioButton), FlatStyle.Popup)]
+    public void ModernGlyphControl_Image_DoesNotCoverGlyph(Type controlType, FlatStyle flatStyle)
+    {
+        if (SystemInformation.HighContrast)
+        {
+            return;
+        }
+
+        using Bitmap image = CreateSolidBitmap(new Size(120, 44), Color.Fuchsia);
+        using ButtonBase control = (ButtonBase)Activator.CreateInstance(controlType);
+        control.AutoSize = false;
+        control.BackColor = Color.Fuchsia;
+        control.FlatStyle = flatStyle;
+        control.Size = image.Size;
+        control.Text = string.Empty;
+        control.VisualStylesMode = VisualStylesMode.Net11;
+        control.CreateControl();
+        using Bitmap withoutImage = new(control.Width, control.Height);
+        using Bitmap withImage = new(control.Width, control.Height);
+
+        control.DrawToBitmap(withoutImage, control.ClientRectangle);
+        control.Image = image;
+        control.DrawToBitmap(withImage, control.ClientRectangle);
+
+        Assert.True(CountDifferentPixels(withoutImage, image, control.ClientRectangle) > 0);
+        Assert.Equal(0, CountDifferentPixels(withoutImage, withImage, control.ClientRectangle));
+    }
+
+    [WinFormsTheory]
+    [InlineData(typeof(CheckBox), FlatStyle.Standard)]
+    [InlineData(typeof(CheckBox), FlatStyle.Flat)]
+    [InlineData(typeof(CheckBox), FlatStyle.Popup)]
+    [InlineData(typeof(RadioButton), FlatStyle.Standard)]
+    [InlineData(typeof(RadioButton), FlatStyle.Flat)]
+    [InlineData(typeof(RadioButton), FlatStyle.Popup)]
+    public void ModernGlyphControl_BackgroundImage_CoversClientRectangle(Type controlType, FlatStyle flatStyle)
+    {
+        if (SystemInformation.HighContrast)
+        {
+            return;
+        }
+
+        using Bitmap image = CreateSolidBitmap(new Size(120, 44), Color.Fuchsia);
+        using ButtonBase control = (ButtonBase)Activator.CreateInstance(controlType);
+        control.AutoSize = false;
+        control.BackColor = Color.White;
+        control.BackgroundImage = image;
+        control.FlatStyle = flatStyle;
+        control.Size = image.Size;
+        control.Text = string.Empty;
+        control.VisualStylesMode = VisualStylesMode.Net11;
+        control.CreateControl();
+        using Bitmap actual = new(control.Width, control.Height);
+
+        foreach (ImageLayout imageLayout in Enum.GetValues<ImageLayout>())
+        {
+            control.BackgroundImageLayout = imageLayout;
+            control.DrawToBitmap(actual, control.ClientRectangle);
+
+            Assert.Equal(control.ClientRectangle, FindColorBounds(actual, Color.Fuchsia));
+        }
+    }
+
+    [WinFormsTheory]
     [InlineData(typeof(CheckBox))]
     [InlineData(typeof(RadioButton))]
     public void ModernGlyphControl_TransparentBackColor_PaintsParentBackgroundImage(Type controlType)

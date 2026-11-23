@@ -84,7 +84,8 @@ internal sealed class CheckBoxModernAdapter : CheckBoxBaseAdapter
 
         LayoutData layout = Layout(e).Layout();
         AdjustFocusRectangle(layout);
-        PaintBackgroundImage(e);
+        PaintBackgroundImage(e, Control.ClientRectangle);
+        PaintImage(e, layout);
 
         Color? customBorderColor = Control.FlatAppearance.BorderColor.IsEmpty
             ? null
@@ -100,8 +101,6 @@ internal sealed class CheckBoxModernAdapter : CheckBoxBaseAdapter
             Control.Focused && Control.ShowFocusCues,
             customOnColor: null,
             customBorderColor);
-
-        PaintImage(e, layout);
 
         Color preferredTextColor = Control.ShouldSerializeForeColor() || Control.ForeColor != Forms.Control.DefaultForeColor
             ? Control.ForeColor

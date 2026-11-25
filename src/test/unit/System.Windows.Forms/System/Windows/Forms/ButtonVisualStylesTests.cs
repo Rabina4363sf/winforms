@@ -76,6 +76,11 @@ public class ButtonVisualStylesTests
         }
 
         using Bitmap image = CreateSolidBitmap(new Size(120, 44), Color.Fuchsia);
+        using (Graphics graphics = Graphics.FromImage(image))
+        {
+            graphics.FillRectangle(Brushes.Blue, 60, 0, 60, image.Height);
+        }
+
         using ButtonBase control = (ButtonBase)Activator.CreateInstance(controlType);
         control.AutoSize = false;
         control.BackColor = Color.Fuchsia;
@@ -91,42 +96,117 @@ public class ButtonVisualStylesTests
         control.Image = image;
         control.DrawToBitmap(withImage, control.ClientRectangle);
 
-        Assert.True(CountDifferentPixels(withoutImage, image, control.ClientRectangle) > 0);
-        Assert.Equal(0, CountDifferentPixels(withoutImage, withImage, control.ClientRectangle));
+        int glyphPixels = 0;
+        for (int y = 0; y < control.Height; y++)
+        {
+            for (int x = 0; x < control.Width / 2; x++)
+            {
+                if (withoutImage.GetPixel(x, y).ToArgb() != Color.Fuchsia.ToArgb())
+                {
+                    Assert.Equal(withoutImage.GetPixel(x, y), withImage.GetPixel(x, y));
+                    glyphPixels++;
+                }
+            }
+        }
+
+        Assert.True(glyphPixels > 0, "The reference rendering must contain a visible glyph.");
+        Assert.Equal(Color.Blue.ToArgb(), withImage.GetPixel(80, 20).ToArgb());
+        Assert.NotEqual(withoutImage.GetPixel(80, 20), withImage.GetPixel(80, 20));
+    }
+
+    public static TheoryData<Type, FlatStyle, ImageLayout, RightToLeft> ModernGlyphBackgroundImageData
+    {
+        get
+        {
+            TheoryData<Type, FlatStyle, ImageLayout, RightToLeft> data = new();
+            foreach (Type controlType in new[] { typeof(CheckBox), typeof(RadioButton) })
+            {
+                foreach (FlatStyle flatStyle in new[] { FlatStyle.Standard, FlatStyle.Flat, FlatStyle.Popup })
+                {
+                    foreach (ImageLayout imageLayout in Enum.GetValues<ImageLayout>())
+                    {
+                        data.Add(controlType, flatStyle, imageLayout, RightToLeft.No);
+                        data.Add(controlType, flatStyle, imageLayout, RightToLeft.Yes);
+                    }
+                }
+            }
+
+            return data;
+        }
     }
 
     [WinFormsTheory]
-    [InlineData(typeof(CheckBox), FlatStyle.Standard)]
-    [InlineData(typeof(CheckBox), FlatStyle.Flat)]
-    [InlineData(typeof(CheckBox), FlatStyle.Popup)]
-    [InlineData(typeof(RadioButton), FlatStyle.Standard)]
-    [InlineData(typeof(RadioButton), FlatStyle.Flat)]
-    [InlineData(typeof(RadioButton), FlatStyle.Popup)]
-    public void ModernGlyphControl_BackgroundImage_CoversClientRectangle(Type controlType, FlatStyle flatStyle)
+    [MemberData(nameof(ModernGlyphBackgroundImageData))]
+    public void ModernGlyphControl_BackgroundImage_UsesLayoutAndClientBounds(
+        Type controlType,
+        FlatStyle flatStyle,
+        ImageLayout imageLayout,
+        RightToLeft rightToLeft)
     {
         if (SystemInformation.HighContrast)
         {
             return;
         }
 
-        using Bitmap image = CreateSolidBitmap(new Size(120, 44), Color.Fuchsia);
+        using Bitmap image = CreateSolidBitmap(new Size(40, 20), Color.Fuchsia);
+        using (Graphics graphics = Graphics.FromImage(image))
+        {
+            graphics.FillRectangle(Brushes.Blue, 20, 0, 20, image.Height);
+        }
+
         using ButtonBase control = (ButtonBase)Activator.CreateInstance(controlType);
         control.AutoSize = false;
         control.BackColor = Color.White;
         control.BackgroundImage = image;
+        control.BackgroundImageLayout = imageLayout;
         control.FlatStyle = flatStyle;
-        control.Size = image.Size;
+        control.RightToLeft = rightToLeft;
+        control.Size = new Size(120, 80);
         control.Text = string.Empty;
         control.VisualStylesMode = VisualStylesMode.Net11;
         control.CreateControl();
         using Bitmap actual = new(control.Width, control.Height);
 
-        foreach (ImageLayout imageLayout in Enum.GetValues<ImageLayout>())
-        {
-            control.BackgroundImageLayout = imageLayout;
-            control.DrawToBitmap(actual, control.ClientRectangle);
+        control.DrawToBitmap(actual, control.ClientRectangle);
 
-            Assert.Equal(control.ClientRectangle, FindColorBounds(actual, Color.Fuchsia));
+        if (imageLayout == ImageLayout.Tile)
+        {
+            for (int y = 0; y < control.Height; y += image.Height)
+            {
+                if (y == control.Height / 2)
+                {
+                    continue;
+                }
+
+                for (int x = 0; x < control.Width; x += image.Width)
+                {
+                    Assert.Equal(Color.Fuchsia.ToArgb(), actual.GetPixel(x + 10, y + 5).ToArgb());
+                    Assert.Equal(Color.Blue.ToArgb(), actual.GetPixel(x + 30, y + 5).ToArgb());
+                }
+            }
+
+            Assert.Equal(Color.Fuchsia.ToArgb(), actual.GetPixel(0, 0).ToArgb());
+            Assert.Equal(Color.Blue.ToArgb(), actual.GetPixel(control.Width - 1, control.Height - 1).ToArgb());
+            return;
+        }
+
+        Rectangle expected = imageLayout switch
+        {
+            ImageLayout.None => new Rectangle(rightToLeft == RightToLeft.Yes ? 80 : 0, 0, 40, 20),
+            ImageLayout.Center => new Rectangle(40, 30, 40, 20),
+            ImageLayout.Stretch => control.ClientRectangle,
+            ImageLayout.Zoom => new Rectangle(0, 10, 120, 60),
+            _ => throw new InvalidEnumArgumentException(nameof(imageLayout), (int)imageLayout, typeof(ImageLayout))
+        };
+        Rectangle actualImageBounds = Rectangle.Union(
+            FindColorBounds(actual, Color.Fuchsia),
+            FindColorBounds(actual, Color.Blue));
+        Assert.Equal(expected, actualImageBounds);
+        Assert.Equal(Color.Fuchsia.ToArgb(), actual.GetPixel(expected.Left + expected.Width / 4, expected.Top + 5).ToArgb());
+        Assert.Equal(Color.Blue.ToArgb(), actual.GetPixel(expected.Left + expected.Width * 3 / 4, expected.Top + 5).ToArgb());
+        if (imageLayout != ImageLayout.Stretch)
+        {
+            Assert.Equal(Color.White.ToArgb(), actual.GetPixel(control.Width / 2, control.Height - 1).ToArgb());
         }
     }
 

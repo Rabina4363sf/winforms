@@ -68,6 +68,57 @@ public class ButtonVisualStylesTests
     [InlineData(typeof(RadioButton), FlatStyle.Standard)]
     [InlineData(typeof(RadioButton), FlatStyle.Flat)]
     [InlineData(typeof(RadioButton), FlatStyle.Popup)]
+    public void ClassicGlyphControl_OversizedImage_ReachesClientEdges(Type controlType, FlatStyle flatStyle)
+    {
+        using Bitmap image = CreateSolidBitmap(new Size(300, 160), Color.Fuchsia);
+        using ButtonBase control = (ButtonBase)Activator.CreateInstance(controlType);
+        control.AutoSize = false;
+        control.BackColor = Color.White;
+        control.FlatStyle = flatStyle;
+        control.Image = image;
+        control.Size = new Size(250, 80);
+        control.Text = string.Empty;
+        control.VisualStylesMode = VisualStylesMode.Classic;
+        control.CreateControl();
+        using Bitmap actual = new(control.Width, control.Height);
+
+        control.DrawToBitmap(actual, control.ClientRectangle);
+
+        Assert.Equal(Color.Fuchsia.ToArgb(), actual.GetPixel(0, 0).ToArgb());
+        Assert.Equal(Color.Fuchsia.ToArgb(), actual.GetPixel(control.Width - 1, 0).ToArgb());
+        Assert.Equal(Color.Fuchsia.ToArgb(), actual.GetPixel(0, control.Height - 1).ToArgb());
+        Assert.Equal(Color.Fuchsia.ToArgb(), actual.GetPixel(control.Width - 1, control.Height - 1).ToArgb());
+
+        control.Image = null;
+        control.BackColor = Color.Fuchsia;
+        using Bitmap reference = new(control.Width, control.Height);
+        control.DrawToBitmap(reference, control.ClientRectangle);
+        control.Image = image;
+        control.DrawToBitmap(actual, control.ClientRectangle);
+
+        int glyphPixels = 0;
+        for (int y = 0; y < control.Height; y++)
+        {
+            for (int x = 0; x < control.Width / 2; x++)
+            {
+                if (reference.GetPixel(x, y).ToArgb() != Color.Fuchsia.ToArgb())
+                {
+                    Assert.Equal(reference.GetPixel(x, y), actual.GetPixel(x, y));
+                    glyphPixels++;
+                }
+            }
+        }
+
+        Assert.True(glyphPixels > 0, "The reference rendering must contain a visible glyph.");
+    }
+
+    [WinFormsTheory]
+    [InlineData(typeof(CheckBox), FlatStyle.Standard)]
+    [InlineData(typeof(CheckBox), FlatStyle.Flat)]
+    [InlineData(typeof(CheckBox), FlatStyle.Popup)]
+    [InlineData(typeof(RadioButton), FlatStyle.Standard)]
+    [InlineData(typeof(RadioButton), FlatStyle.Flat)]
+    [InlineData(typeof(RadioButton), FlatStyle.Popup)]
     public void ModernGlyphControl_Image_DoesNotCoverGlyph(Type controlType, FlatStyle flatStyle)
     {
         if (SystemInformation.HighContrast)

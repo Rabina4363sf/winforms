@@ -111,6 +111,7 @@ internal sealed class CheckBoxStandardAdapter : CheckBoxBaseAdapter
     {
         LayoutOptions layout = CommonLayout();
         layout.CheckPaddingSize = 1;
+        layout.ClipImagesToClient = true;
         layout.DotNetOneButtonCompat = !Application.RenderWithVisualStyles;
 
         if (Application.RenderWithVisualStyles)

@@ -56,6 +56,7 @@ internal class RadioButtonStandardAdapter : RadioButtonBaseAdapter
     {
         LayoutOptions layout = CommonLayout();
         layout.HintTextUp = false;
+        layout.ClipImagesToClient = true;
         layout.DotNetOneButtonCompat = !Application.RenderWithVisualStyles;
 
         if (Application.RenderWithVisualStyles)

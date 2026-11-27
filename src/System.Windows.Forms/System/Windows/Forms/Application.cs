@@ -1167,13 +1167,14 @@ public sealed partial class Application
             }
 
             s_exiting = true;
+            HashSet<Form>? processedForms = null;
 
             try
             {
                 // Raise the FormClosing and FormClosed events for each open form
                 if (s_forms?.Count > 0)
                 {
-                    HashSet<Form> processedForms = new(s_forms.Count);
+                    processedForms = new(s_forms.Count);
                     int version = s_forms.AddVersion;
                     // We need to iterate in backward order to not violate MDI closing events rules
                     for (int i = s_forms.Count - 1; i > -1; i--)
@@ -1190,6 +1191,11 @@ public sealed partial class Application
                         {
                             // A form refused to close
                             e?.Cancel = true;
+
+                            foreach (Form processedForm in processedForms)
+                            {
+                                processedForm.NotifyFormClosingCancelled();
+                            }
 
                             processedForms.Clear();
                             return;
@@ -1225,6 +1231,18 @@ public sealed partial class Application
 
                 ThreadContext.ExitApplication();
                 e?.Cancel = false;
+            }
+            catch
+            {
+                if (processedForms is not null)
+                {
+                    foreach (Form processedForm in processedForms)
+                    {
+                        processedForm.NotifyFormClosingCancelled();
+                    }
+                }
+
+                throw;
             }
             finally
             {

@@ -814,6 +814,176 @@ public class KioskModeManagerTests
         Assert.False(form.TopMost);
     }
 
+    [WinFormsTheory]
+    [InlineData(FormWindowState.Normal)]
+    [InlineData(FormWindowState.Maximized)]
+    public void KioskModeManager_CloseWhileFullScreen_RestoresStateBeforeClosing(FormWindowState windowState)
+    {
+        using Container components = new();
+        using ComponentForm form = new(components)
+        {
+            StartPosition = FormStartPosition.Manual,
+            Bounds = new Rectangle(100, 100, 800, 600),
+            TopMost = true
+        };
+        form.Show();
+        form.WindowState = windowState;
+        Rectangle originalBounds = windowState == FormWindowState.Normal ? form.Bounds : form.RestoreBounds;
+        Rectangle savedBounds = Rectangle.Empty;
+        FormWindowState savedState = FormWindowState.Minimized;
+        FormBorderStyle savedBorder = FormBorderStyle.None;
+        bool savedTopMost = false;
+        // Register before the component to verify that subscription order does not affect saved settings.
+        form.FormClosing += (_, _) =>
+        {
+            savedBounds = form.WindowState == FormWindowState.Normal ? form.Bounds : form.RestoreBounds;
+            savedState = form.WindowState;
+            savedBorder = form.FormBorderStyle;
+            savedTopMost = form.TopMost;
+        };
+        using KioskModeManager manager = new(components) { ContainerControl = form, FullScreen = true };
+
+        form.Close();
+
+        Assert.Equal(originalBounds, savedBounds);
+        Assert.Equal(originalBounds, form.BoundsInClosingOverride);
+        Assert.Equal(windowState, savedState);
+        Assert.Equal(FormBorderStyle.Sizable, savedBorder);
+        Assert.True(savedTopMost);
+        Assert.True(form.IsDisposed);
+        Assert.False(manager.FullScreen);
+    }
+
+    [WinFormsFact]
+    public void KioskModeManager_CloseWhileFullScreen_DoesNotAccessReleasedResources()
+    {
+        using Container components = new();
+        using Form form = new ComponentForm(components);
+        using KioskModeManager manager = new(components) { ContainerControl = form };
+        bool closed = false;
+        int postCloseChanges = 0;
+        form.FormClosed += (_, _) => closed = true;
+        form.StyleChanged += (_, _) =>
+        {
+            if (closed)
+            {
+                throw new InvalidOperationException("The form's rendering resources have already been released.");
+            }
+        };
+        form.SizeChanged += (_, _) => postCloseChanges += closed ? 1 : 0;
+        form.Layout += (_, _) => postCloseChanges += closed ? 1 : 0;
+        form.Show();
+        manager.FullScreen = true;
+
+        Exception exception;
+        try
+        {
+            exception = Record.Exception(form.Close);
+        }
+        finally
+        {
+            closed = false;
+        }
+
+        Assert.Null(exception);
+        Assert.Equal(0, postCloseChanges);
+        Assert.True(form.IsDisposed);
+    }
+
+    [WinFormsFact]
+    public void KioskModeManager_CloseCancelled_ReturnsToFullScreen()
+    {
+        using Form form = new();
+        using KioskModeManager manager = new() { ContainerControl = form };
+        form.Show();
+        manager.FullScreen = true;
+        Rectangle fullscreenBounds = form.Bounds;
+        form.FormClosing += (_, e) => e.Cancel = true;
+
+        form.Close();
+
+        Assert.False(form.IsDisposed);
+        Assert.True(manager.FullScreen);
+        Assert.Equal(FormBorderStyle.None, form.FormBorderStyle);
+        Assert.Equal(fullscreenBounds, form.Bounds);
+        manager.FullScreen = false;
+    }
+
+    [WinFormsFact]
+    public void KioskModeManager_ApplicationExitClosing_RestoresOriginalState()
+    {
+        using Form form = new() { Bounds = new Rectangle(100, 100, 800, 600) };
+        Rectangle originalBounds = form.Bounds;
+        Rectangle savedBounds = Rectangle.Empty;
+        form.FormClosing += (_, _) => savedBounds = form.Bounds;
+        using KioskModeManager manager = new() { ContainerControl = form, FullScreen = true };
+
+        Assert.False(form.RaiseFormClosingOnAppExit());
+
+        Assert.Equal(originalBounds, savedBounds);
+        Assert.False(manager.FullScreen);
+    }
+
+    [WinFormsFact]
+    public void KioskModeManager_OwnerCloseCancelled_ReturnsOwnedFormToFullScreen()
+    {
+        using Form owner = new();
+        using Form form = new();
+        using KioskModeManager manager = new() { ContainerControl = form };
+        owner.Show();
+        form.Show(owner);
+        manager.FullScreen = true;
+        owner.FormClosing += (_, e) => e.Cancel = true;
+
+        owner.Close();
+
+        Assert.False(form.IsDisposed);
+        Assert.True(manager.FullScreen);
+        Assert.Equal(FormBorderStyle.None, form.FormBorderStyle);
+        manager.FullScreen = false;
+    }
+
+    [WinFormsFact]
+    public void KioskModeManager_ApplicationExitCancelledByAnotherForm_ReturnsToFullScreen()
+    {
+        using Form blocker = new();
+        using Form form = new();
+        using KioskModeManager manager = new() { ContainerControl = form };
+        blocker.Show();
+        form.Show();
+        manager.FullScreen = true;
+        blocker.FormClosing += (_, e) => e.Cancel = true;
+        CancelEventArgs exit = new();
+
+        Application.Exit(exit);
+
+        Assert.True(exit.Cancel);
+        Assert.False(form.IsDisposed);
+        Assert.True(manager.FullScreen);
+        Assert.Equal(FormBorderStyle.None, form.FormBorderStyle);
+        manager.FullScreen = false;
+    }
+
+    [WinFormsFact]
+    public void KioskModeManager_CloseCancelledWithExplicitExit_DoesNotResumeFullScreen()
+    {
+        using Form form = new();
+        using KioskModeManager manager = new() { ContainerControl = form };
+        form.Show();
+        manager.FullScreen = true;
+        form.FormClosing += (_, e) =>
+        {
+            manager.FullScreen = false;
+            e.Cancel = true;
+        };
+
+        form.Close();
+
+        Assert.False(form.IsDisposed);
+        Assert.False(manager.FullScreen);
+        Assert.Equal(FormBorderStyle.Sizable, form.FormBorderStyle);
+    }
+
     [WinFormsFact]
     public void KioskModeManager_ProcessMessage_KeyDownThenKeyUp_TogglesOnce()
     {
@@ -876,6 +1046,32 @@ public class KioskModeManagerTests
         Assert.False(manager.TestAccessor.Dynamic._isCursorHidden);
         Assert.True(timer.Enabled);
         Assert.Equal(1, timer.Interval);
+    }
+
+    /// <summary>
+    ///  Reproduces designer-generated component disposal after FormClosed.
+    /// </summary>
+    private class ComponentForm(Container components) : Form
+    {
+        public Rectangle BoundsInClosingOverride;
+
+        /// <inheritdoc/>
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            BoundsInClosingOverride = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
+            base.OnFormClosing(e);
+        }
+
+        /// <inheritdoc/>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                components.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
     }
 
     private class SubKioskModeManager : KioskModeManager

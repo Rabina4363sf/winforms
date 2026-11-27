@@ -31,6 +31,8 @@ public partial class Form : ContainerControl
     private static readonly object s_closedEvent = new();
     private static readonly object s_formClosingEvent = new();
     private static readonly object s_formClosedEvent = new();
+    private static readonly object s_formClosingStartedEvent = new();
+    private static readonly object s_formClosingCancelledEvent = new();
     private static readonly object s_deactivateEvent = new();
     private static readonly object s_loadEvent = new();
     private static readonly object s_mdiChildActivateEvent = new();
@@ -3200,13 +3202,11 @@ public partial class Form : ContainerControl
 
             if (!CalledClosing)
             {
-#pragma warning disable WFDEV004 // Type or member is obsolete - compat
-                OnClosing(e);
-#pragma warning restore WFDEV004
-                OnFormClosing(e);
+                RaiseFormClosing(e, raiseClosing: true);
                 if (e.Cancel)
                 {
                     _dialogResult = DialogResult.None;
+                    NotifyFormClosingCancelled();
                 }
                 else
                 {
@@ -4083,6 +4083,65 @@ public partial class Form : ContainerControl
     }
 
     /// <summary>
+    ///  Allows components to restore window state before application closing handlers run.
+    /// </summary>
+    internal event EventHandler? FormClosingStarted
+    {
+        add => Events.AddHandler(s_formClosingStartedEvent, value);
+        remove => Events.RemoveHandler(s_formClosingStartedEvent, value);
+    }
+
+    /// <summary>
+    ///  Allows components to resume their window mode when a close is cancelled.
+    /// </summary>
+    internal event EventHandler? FormClosingCancelled
+    {
+        add => Events.AddHandler(s_formClosingCancelledEvent, value);
+        remove => Events.RemoveHandler(s_formClosingCancelledEvent, value);
+    }
+
+    /// <summary>
+    ///  Prepares window state before invoking even overridden closing handlers.
+    /// </summary>
+    private void RaiseFormClosing(FormClosingEventArgs e, bool raiseClosing = false)
+    {
+        try
+        {
+            ((EventHandler?)Events[s_formClosingStartedEvent])?.Invoke(this, EventArgs.Empty);
+            if (raiseClosing)
+            {
+#pragma warning disable WFDEV004 // Type or member is obsolete - compat
+                OnClosing(e);
+#pragma warning restore WFDEV004
+            }
+
+            OnFormClosing(e);
+        }
+        catch
+        {
+            NotifyFormClosingCancelled();
+            throw;
+        }
+    }
+
+    /// <summary>
+    ///  Resumes window modes for this form and children whose close was cancelled by their owner.
+    /// </summary>
+    internal void NotifyFormClosingCancelled()
+    {
+        ((EventHandler?)Events[s_formClosingCancelledEvent])?.Invoke(this, EventArgs.Empty);
+        foreach (Form child in MdiChildren)
+        {
+            child.NotifyFormClosingCancelled();
+        }
+
+        foreach (Form ownedForm in OwnedForms)
+        {
+            ownedForm.NotifyFormClosingCancelled();
+        }
+    }
+
+    /// <summary>
     ///  The Closed event is fired when the form is closed.
     /// </summary>
     [EditorBrowsable(EditorBrowsableState.Advanced)]
@@ -4933,7 +4992,7 @@ public partial class Form : ContainerControl
                 {
                     if (ownedForms[i] is not null && !Application.OpenForms.Contains(ownedForms[i]))
                     {
-                        ownedForms[i].OnFormClosing(fce);
+                        ownedForms[i].RaiseFormClosing(fce);
                         if (fce.Cancel)
                         {
                             e.Cancel = true;
@@ -4944,7 +5003,12 @@ public partial class Form : ContainerControl
             }
         }
 
-        OnFormClosing(e);
+        RaiseFormClosing(e);
+        if (e.Cancel)
+        {
+            NotifyFormClosingCancelled();
+        }
+
         return e.Cancel;
     }
 
@@ -6793,10 +6857,7 @@ public partial class Form : ContainerControl
                     {
                         if (mdiChild.IsHandleCreated)
                         {
-#pragma warning disable WFDEV004 // Type or member is obsolete - compat
-                            mdiChild.OnClosing(fe);
-#pragma warning restore WFDEV004
-                            mdiChild.OnFormClosing(fe);
+                            mdiChild.RaiseFormClosing(fe, raiseClosing: true);
                             if (fe.Cancel)
                             {
                                 // Set the Cancel property for the MDI Container's
@@ -6823,15 +6884,8 @@ public partial class Form : ContainerControl
 
                         // The modal loop normally raises the legacy Closing event. Raise it here
                         // so it can still cancel the close before the owner commits it.
-                        if (ownedForm.Modal)
-                        {
-#pragma warning disable WFDEV004 // Type or member is obsolete - compat
-                            ownedForm.OnClosing(cfe);
-#pragma warning restore WFDEV004
-                        }
-
                         // Call OnFormClosing on the child forms.
-                        ownedForm.OnFormClosing(cfe);
+                        ownedForm.RaiseFormClosing(cfe, raiseClosing: ownedForm.Modal);
                         if (cfe.Cancel)
                         {
                             // Set the cancel flag for the Owner form
@@ -6841,10 +6895,7 @@ public partial class Form : ContainerControl
                     }
                 }
 
-#pragma warning disable WFDEV004 // Type or member is obsolete - compat
-                OnClosing(e);
-#pragma warning restore WFDEV004
-                OnFormClosing(e);
+                RaiseFormClosing(e, raiseClosing: true);
             }
 
             if (m.MsgInternal == PInvokeCore.WM_QUERYENDSESSION)
@@ -6865,6 +6916,11 @@ public partial class Form : ContainerControl
         else
         {
             e.Cancel = m.WParamInternal == 0;
+        }
+
+        if (e.Cancel)
+        {
+            NotifyFormClosingCancelled();
         }
 
         // Pass 2 (WM_CLOSE & WM_ENDSESSION)... Fire closed

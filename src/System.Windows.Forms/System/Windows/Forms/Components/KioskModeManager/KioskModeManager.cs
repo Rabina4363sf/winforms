@@ -72,6 +72,7 @@ public class KioskModeManager : Component, ISupportInitialize
     private bool _pendingFullScreen;
     private bool _initializing;
     private bool _isCursorHidden;
+    private bool _restoreFullScreenOnCancelledClose;
     private readonly List<Control> _parentChain = [];
     private KioskModeMessageFilter? _messageFilter;
     private KioskModeFormObserver? _formObserver;
@@ -415,6 +416,7 @@ public class KioskModeManager : Component, ISupportInitialize
         get => _pendingFullScreen || _isFullScreen;
         set
         {
+            _restoreFullScreenOnCancelledClose = false;
             if (!value)
             {
                 _pendingFullScreen = false;
@@ -516,6 +518,43 @@ public class KioskModeManager : Component, ISupportInitialize
     }
 
     /// <summary>
+    ///  Makes the saved window state available before application closing handlers run.
+    /// </summary>
+    private void OnFormClosingStarted(object? sender, EventArgs e)
+    {
+        if (_isFullScreen)
+        {
+            _restoreFullScreenOnCancelledClose = true;
+            ExitFullScreen();
+        }
+    }
+
+    /// <summary>
+    ///  Resumes fullscreen after an attempted close is cancelled.
+    /// </summary>
+    private void OnFormClosingCancelled(object? sender, EventArgs e)
+    {
+        bool restore = _restoreFullScreenOnCancelledClose;
+        _restoreFullScreenOnCancelledClose = false;
+        if (restore && _targetForm is { IsDisposed: false, Disposing: false })
+        {
+            EnterFullScreen();
+        }
+    }
+
+    /// <summary>
+    ///  Releases the closed window without restoring its style or bounds during disposal.
+    /// </summary>
+    private void OnFormClosed(object? sender, FormClosedEventArgs e)
+    {
+        _pendingFullScreen = false;
+        _restoreFullScreenOnCancelledClose = false;
+        SetFullScreenState(false);
+        DetachFromForm();
+        ReleasePowerRequest();
+    }
+
+    /// <summary>
     ///  Updates the fullscreen state and raises <see cref="FullScreenChanged"/>
     ///  when the value changes.
     /// </summary>
@@ -568,6 +607,7 @@ public class KioskModeManager : Component, ISupportInitialize
         if (disposing)
         {
             _pendingFullScreen = false;
+            _restoreFullScreenOnCancelledClose = false;
             ExitFullScreen();
             DetachFromForm();
             _mousePointerAutoHideTimer?.Dispose();
@@ -1004,6 +1044,9 @@ public class KioskModeManager : Component, ISupportInitialize
             _form = form;
             form.HandleCreated += OnFormHandleCreated;
             form.HandleDestroyed += OnFormHandleDestroyed;
+            form.FormClosingStarted += _owner.OnFormClosingStarted;
+            form.FormClosingCancelled += _owner.OnFormClosingCancelled;
+            form.FormClosed += _owner.OnFormClosed;
 
             if (form.IsHandleCreated)
             {
@@ -1017,6 +1060,9 @@ public class KioskModeManager : Component, ISupportInitialize
             {
                 _form.HandleCreated -= OnFormHandleCreated;
                 _form.HandleDestroyed -= OnFormHandleDestroyed;
+                _form.FormClosingStarted -= _owner.OnFormClosingStarted;
+                _form.FormClosingCancelled -= _owner.OnFormClosingCancelled;
+                _form.FormClosed -= _owner.OnFormClosed;
                 _form = null;
             }
 

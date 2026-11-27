@@ -113,6 +113,59 @@ public class ButtonVisualStylesTests
     }
 
     [WinFormsTheory]
+    [InlineData(typeof(CheckBox))]
+    [InlineData(typeof(RadioButton))]
+    public void ClassicStandardGlyphControl_OversizedImage_RespectsPaddingAndKeepsGlyphVisible(Type controlType)
+    {
+        Padding padding = new(20);
+        using Bitmap image = CreateSolidBitmap(new Size(300, 160), Color.Fuchsia);
+        using ButtonBase control = (ButtonBase)Activator.CreateInstance(controlType);
+        control.AutoSize = false;
+        control.BackColor = Color.White;
+        control.FlatStyle = FlatStyle.Standard;
+        control.Padding = padding;
+        control.Size = new Size(160, 80);
+        control.Text = string.Empty;
+        control.VisualStylesMode = VisualStylesMode.Classic;
+        control.CreateControl();
+
+        using Bitmap withoutImage = new(control.Width, control.Height);
+        using Bitmap withImage = new(control.Width, control.Height);
+        control.DrawToBitmap(withoutImage, control.ClientRectangle);
+
+        control.Image = image;
+        control.DrawToBitmap(withImage, control.ClientRectangle);
+
+        Assert.Equal(
+            withoutImage.GetPixel(padding.Left / 2, control.Height / 2),
+            withImage.GetPixel(padding.Left / 2, control.Height / 2));
+        Assert.Equal(
+            withoutImage.GetPixel(control.Width - padding.Right / 2, control.Height / 2),
+            withImage.GetPixel(control.Width - padding.Right / 2, control.Height / 2));
+        Assert.Equal(
+            withoutImage.GetPixel(control.Width / 2, padding.Top / 2),
+            withImage.GetPixel(control.Width / 2, padding.Top / 2));
+        Assert.Equal(
+            withoutImage.GetPixel(control.Width / 2, control.Height - padding.Bottom / 2),
+            withImage.GetPixel(control.Width / 2, control.Height - padding.Bottom / 2));
+        Assert.Equal(Color.Fuchsia.ToArgb(), withImage.GetPixel(control.Width / 2, control.Height / 2).ToArgb());
+
+        int visibleGlyphPixels = 0;
+        for (int y = control.Height / 2 - 10; y < control.Height / 2 + 10; y++)
+        {
+            for (int x = padding.Left; x < padding.Left + 20; x++)
+            {
+                if (withImage.GetPixel(x, y).ToArgb() != Color.Fuchsia.ToArgb())
+                {
+                    visibleGlyphPixels++;
+                }
+            }
+        }
+
+        Assert.True(visibleGlyphPixels > 0, "The glyph should remain visible over the image.");
+    }
+
+    [WinFormsTheory]
     [InlineData(typeof(CheckBox), FlatStyle.Standard)]
     [InlineData(typeof(CheckBox), FlatStyle.Flat)]
     [InlineData(typeof(CheckBox), FlatStyle.Popup)]
